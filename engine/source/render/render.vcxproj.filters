@@ -1,0 +1,177 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="include">
+      <UniqueIdentifier>{8a3b4b44-1f41-4582-9857-b7a28319d1c3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source">
+      <UniqueIdentifier>{50396b47-dd8c-4e04-a616-48899eb51a92}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="include\interface">
+      <UniqueIdentifier>{9a5d8db3-ce40-491f-b7b6-d8673b926505}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\interface">
+      <UniqueIdentifier>{3eec57a4-f3d1-495a-b33e-112549ab64ae}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\interface\d3d12">
+      <UniqueIdentifier>{170a5d8f-eeb3-4c3a-b6fa-27bbebcdb519}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\interface\vulkan">
+      <UniqueIdentifier>{0cfa0ad8-dd83-49df-9ddf-9051f39accd6}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\include\engine\render\renderer.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\engine\render\interface\buffer.h">
+      <Filter>include\interface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\engine\render\interface\common.h">
+      <Filter>include\interface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\engine\render\interface\renderinterface.h">
+      <Filter>include\interface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\engine\render\interface\texture.h">
+      <Filter>include\interface</Filter>
+    </ClInclude>
+    <ClInclude Include="source\deferredrenderer.hpp">
+      <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="source\resourcemanager.hpp">
+      <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="source\interface\d3d12\d3d12buffer.hpp">
+      <Filter>source\interface\d3d12</Filter>
+    </ClInclude>
+    <ClInclude Include="source\interface\d3d12\d3d12common.hpp">
+      <Filter>source\interface\d3d12</Filter>
+    </ClInclude>
+    <ClInclude Include="source\interface\d3d12\d3d12renderinterface.hpp">
+      <Filter>source\interface\d3d12</Filter>
+    </ClInclude>
+    <ClInclude Include="source\interface\d3d12\d3d12resourcemanager.hpp">
+      <Filter>source\interface\d3d12</Filter>
+    </ClInclude>
+    <ClInclude Include="source\interface\d3d12\d3d12swapchain.hpp">
+      <Filter>source\interface\d3d12</Filter>
+    </ClInclude>
+    <ClInclude Include="source\interface\d3d12\d3d12texture.hpp">
+      <Filter>source\interface\d3d12</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\engine\render\interface\swapchain.h">
+      <Filter>include\interface</Filter>
+    </ClInclude>
+    <ClInclude Include="source\shadercompiler.hpp">
+      <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="source\interface\pipelinestate.hpp">
+      <Filter>source\interface</Filter>
+    </ClInclude>
+    <ClInclude Include="source\interface\d3d12\d3d12pipelinestate.hpp">
+      <Filter>source\interface\d3d12</Filter>
+    </ClInclude>
+    <ClInclude Include="source\interface\d3d12\d3d12shadercompiler.hpp">
+      <Filter>source\interface\d3d12</Filter>
+    </ClInclude>
+    <ClInclude Include="source\pipelinestatemanager.hpp">
+      <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="source\interface\pipelinestatedesc.hpp">
+      <Filter>source\interface</Filter>
+    </ClInclude>
+    <ClInclude Include="source\interface\resourcelayoutstate.hpp">
+      <Filter>source\interface</Filter>
+    </ClInclude>
+    <ClInclude Include="source\interface\d3d12\d3d12pipelinestatemanager.hpp">
+      <Filter>source\interface\d3d12</Filter>
+    </ClInclude>
+    <ClInclude Include="source\interface\shader.hpp">
+      <Filter>source\interface</Filter>
+    </ClInclude>
+    <ClInclude Include="source\interface\d3d12\d3d12shader.hpp">
+      <Filter>source\interface\d3d12</Filter>
+    </ClInclude>
+    <ClInclude Include="source\interface\d3d12\d3d12fence.hpp">
+      <Filter>source\interface\d3d12</Filter>
+    </ClInclude>
+    <ClInclude Include="source\interface\fence.hpp">
+      <Filter>source\interface</Filter>
+    </ClInclude>
+    <ClInclude Include="source\interface\devicecontext.hpp" />
+    <ClInclude Include="source\interface\d3d12\d3d12devicecontext.hpp" />
+    <ClInclude Include="source\interface\d3d12\d3d12renderdevice.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="source\deferredrenderer.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="source\renderer.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="source\resourcemanager.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="source\interface\buffer.cpp">
+      <Filter>source\interface</Filter>
+    </ClCompile>
+    <ClCompile Include="source\interface\renderinterface.cpp">
+      <Filter>source\interface</Filter>
+    </ClCompile>
+    <ClCompile Include="source\interface\swapchain.cpp">
+      <Filter>source\interface</Filter>
+    </ClCompile>
+    <ClCompile Include="source\interface\texture.cpp">
+      <Filter>source\interface</Filter>
+    </ClCompile>
+    <ClCompile Include="source\interface\d3d12\d3d12buffer.cpp">
+      <Filter>source\interface\d3d12</Filter>
+    </ClCompile>
+    <ClCompile Include="source\interface\d3d12\d3d12renderinterface.cpp">
+      <Filter>source\interface\d3d12</Filter>
+    </ClCompile>
+    <ClCompile Include="source\interface\d3d12\d3d12resourcemanager.cpp">
+      <Filter>source\interface\d3d12</Filter>
+    </ClCompile>
+    <ClCompile Include="source\interface\d3d12\d3d12swapchain.cpp">
+      <Filter>source\interface\d3d12</Filter>
+    </ClCompile>
+    <ClCompile Include="source\interface\d3d12\d3d12texture.cpp">
+      <Filter>source\interface\d3d12</Filter>
+    </ClCompile>
+    <ClCompile Include="source\shadercompiler.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="source\interface\pipelinestate.cpp">
+      <Filter>source\interface</Filter>
+    </ClCompile>
+    <ClCompile Include="source\interface\d3d12\d3d12pipelinestate.cpp">
+      <Filter>source\interface\d3d12</Filter>
+    </ClCompile>
+    <ClCompile Include="source\interface\d3d12\d3d12shadercompiler.cpp">
+      <Filter>source\interface\d3d12</Filter>
+    </ClCompile>
+    <ClCompile Include="source\pipelinestatemanager.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="source\interface\d3d12\d3d12pipelinestatemanager.cpp">
+      <Filter>source\interface\d3d12</Filter>
+    </ClCompile>
+    <ClCompile Include="source\interface\shader.cpp">
+      <Filter>source\interface</Filter>
+    </ClCompile>
+    <ClCompile Include="source\interface\d3d12\d3d12shader.cpp">
+      <Filter>source\interface\d3d12</Filter>
+    </ClCompile>
+    <ClCompile Include="source\interface\d3d12\d3d12fence.cpp">
+      <Filter>source\interface\d3d12</Filter>
+    </ClCompile>
+    <ClCompile Include="source\interface\fence.cpp">
+      <Filter>source\interface</Filter>
+    </ClCompile>
+    <ClCompile Include="source\interface\renderdevice.cpp" />
+    <ClCompile Include="source\interface\d3d12\d3d12renderdevice.cpp" />
+    <ClCompile Include="source\interface\d3d12\d3d12devicecontext.cpp" />
+  </ItemGroup>
+</Project>

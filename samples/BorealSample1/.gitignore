@@ -1,0 +1,10 @@
+# Build outputs
+build/
+
+# Visual Studio files
+.vs/
+*.user
+
+# Logs
+*.log
+*.tlog

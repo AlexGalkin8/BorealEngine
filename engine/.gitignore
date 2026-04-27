@@ -1,0 +1,14 @@
+# Build outputs
+build/
+
+# Visual Studio files
+.vs/
+*.user
+
+# Github files
+.github/
+
+# Logs
+*.log
+*.tlog
+

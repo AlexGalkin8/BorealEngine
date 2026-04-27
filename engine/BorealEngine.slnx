@@ -1,0 +1,34 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+  </Configurations>
+  <Folder Name="/engine/">
+    <File Path=".gitignore" />
+    <Project Path="source/core/core.vcxproj" Id="882bc60e-11db-4124-8e4a-dc803009814c" />
+    <Project Path="source/engine/engine.vcxproj" Id="35e9704b-aaa5-4204-9363-92b84c6a3faa">
+      <BuildDependency Project="source/core/core.vcxproj" />
+      <BuildDependency Project="source/platform/platform.vcxproj" />
+      <BuildDependency Project="source/render/render.vcxproj" />
+      <BuildDependency Project="source/scene/scene.vcxproj" />
+    </Project>
+    <Project Path="source/math/math.vcxproj" Id="d29d8ed6-69ef-4484-9958-609d234da8a8">
+      <BuildDependency Project="source/core/core.vcxproj" />
+    </Project>
+    <Project Path="source/platform/platform.vcxproj" Id="de13bc12-903c-43d4-be57-e6c8b4a4d8b8">
+      <BuildDependency Project="source/core/core.vcxproj" />
+    </Project>
+    <Project Path="source/render/render.vcxproj" Id="90195bf3-8950-46c2-b7fd-42e2c29da3de">
+      <BuildDependency Project="source/core/core.vcxproj" />
+      <BuildDependency Project="source/platform/platform.vcxproj" />
+    </Project>
+    <Project Path="source/scene/scene.vcxproj" Id="8f5ba3e4-f2ed-47fe-955e-5fa0f3f13ec6" />
+  </Folder>
+  <Folder Name="/samples/">
+    <Project Path="../samples/BorealSample1/BorealSample1.vcxproj" Id="cc02ac99-ab90-4f95-979b-661b4b18be1a">
+      <BuildDependency Project="source/engine/engine.vcxproj" />
+    </Project>
+  </Folder>
+  <Folder Name="/shaders/">
+    <File Path="shaders/base.hlsl" />
+  </Folder>
+</Solution>
