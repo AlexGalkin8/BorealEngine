@@ -21,7 +21,11 @@
       <BuildDependency Project="source/core/core.vcxproj" />
       <BuildDependency Project="source/platform/platform.vcxproj" />
     </Project>
-    <Project Path="source/scene/scene.vcxproj" Id="8f5ba3e4-f2ed-47fe-955e-5fa0f3f13ec6" />
+    <Project Path="source/scene/scene.vcxproj" Id="8f5ba3e4-f2ed-47fe-955e-5fa0f3f13ec6">
+      <BuildDependency Project="source/core/core.vcxproj" />
+      <BuildDependency Project="source/math/math.vcxproj" />
+      <BuildDependency Project="third_party/tinygltf/tinygltf.vcxproj" />
+    </Project>
   </Folder>
   <Folder Name="/samples/">
     <Project Path="../samples/BorealSample1/BorealSample1.vcxproj" Id="cc02ac99-ab90-4f95-979b-661b4b18be1a">
@@ -30,5 +34,8 @@
   </Folder>
   <Folder Name="/shaders/">
     <File Path="shaders/base.hlsl" />
+  </Folder>
+  <Folder Name="/third_party/">
+    <Project Path="third_party/tinygltf/tinygltf.vcxproj" Id="2287d897-b011-4b49-8983-167e357b76da" />
   </Folder>
 </Solution>
