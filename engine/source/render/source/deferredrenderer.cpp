@@ -5,6 +5,8 @@
 #include <engine/scene/scene.h>
 #include <engine/scene/camera.h>
 #include <engine/scene/actor.h>
+#include <engine/core/utility/assert.h>
+#include <engine/core/asset/gltfloader.h>
 
 #include "interface/pipelinestate.hpp"
 #include "interface/renderdevice.h"
@@ -58,25 +60,70 @@ DeferredRenderer::StaticMeshBucket DeferredRenderer::buildStaticMeshBucket(const
 }
 
 
+const DeferredRenderer::RenderMesh* DeferredRenderer::getRenderMeshes(const scene::StaticMeshActor& actor)
+{
+	const scene::MeshHandle& mesh = actor.getMesh();
+	if (!mesh.hasResourcePath())
+	{
+		return nullptr;
+	}
+
+	auto it = render_meshes_.find(mesh.resource_path);
+	if (it != render_meshes_.end())
+	{
+		return &it->second;
+	}
+
+	asset::LoadedMeshData loaded_mesh = asset::loadStaticMeshFromGltf(mesh.resource_path);
+	ASSERT_MSG_RETURN(!loaded_mesh.vertices.empty() && !loaded_mesh.indices.empty(), nullptr, "Failed to load mesh data from glTF file");
+
+	RenderMesh gpu_data{};
+	gpu_data.vertex_stride = sizeof(asset::LoadedMeshData::Vertex);
+	gpu_data.index_count = static_cast<uint32_t>(loaded_mesh.indices.size());
+
+	IBuffer::Desc vertex_desc{};
+	vertex_desc.size = sizeof(asset::LoadedMeshData::Vertex) * loaded_mesh.vertices.size();
+	gpu_data.vertex_buffer = resource_manager_.createBuffer(vertex_desc);
+	gpu_data.vertex_buffer->upload(loaded_mesh.vertices.data(), vertex_desc.size);
+
+	IBuffer::Desc index_desc{};
+	index_desc.size = sizeof(uint32_t) * loaded_mesh.indices.size();
+	gpu_data.index_buffer = resource_manager_.createBuffer(index_desc);
+	gpu_data.index_buffer->upload(loaded_mesh.indices.data(), index_desc.size);
+
+	auto [inserted_it, inserted] = render_meshes_.emplace(mesh.resource_path, gpu_data);
+	ASSERT(inserted);
+	return &inserted_it->second;
+}
+
+
 void DeferredRenderer::drawStaticMeshBucket(const StaticMeshBucket& bucket, const scene::Camera& camera, IDeviceContext& ctx)
 {
 	ctx.setPipelineState(*base_pipeline_state_);
 	ctx.setPrimitiveTopology(EPrimitiveTopology::kTriangle);
-	ctx.setVertexBuffer(*triangle_vertex_buffer_, sizeof(float) * 5);
 
 	for (const scene::StaticMeshActor* static_mesh_actor : bucket)
 	{
+		CameraObjectConstants constants{};
+		constants.world = static_mesh_actor->getTransform().toMatrix4x4();
+		constants.view_projection = camera.getViewProjectionMatrix();
+		ctx.setGraphicsRoot32BitConstants(0, 32, &constants);
+
+		const RenderMesh* imported_mesh = getRenderMeshes(*static_mesh_actor);
+		if (imported_mesh != nullptr)
+		{
+			ctx.setVertexBuffer(*imported_mesh->vertex_buffer, imported_mesh->vertex_stride);
+			ctx.setIndexBuffer(*imported_mesh->index_buffer);
+			ctx.drawIndexed(imported_mesh->index_count, 0, 0);
+			continue;
+		}
+
 		switch (static_mesh_actor->getMesh().primitive)
 		{
 		case scene::EMeshPrimitive::kTriangle:
-		{
-			CameraObjectConstants constants{};
-			constants.world = static_mesh_actor->getTransform().toMatrix4x4();
-			constants.view_projection = camera.getViewProjectionMatrix();
-			ctx.setGraphicsRoot32BitConstants(0, 32, &constants.world[0][0]);
+			ctx.setVertexBuffer(*triangle_vertex_buffer_, sizeof(float) * 5);
 			ctx.draw(3, 0);
 			break;
-		}
 		default:
 			break;
 		}
@@ -127,7 +174,7 @@ void DeferredRenderer::initPipelineStates()
 	desc.resource_layout_state[0] = RootParameter::makeConstants32Bits(0, 32, 0);
 
 	desc.rasterizer_state.cull_mode = ECullMode::kNone;
-	desc.rasterizer_state.depth_clip_enable = true;
+	desc.rasterizer_state.depth_clip_enable = false;
 	desc.rasterizer_state.fill_mode = EFillMode::kSolid;
 
 	desc.output_merger_state.addRenderTarget(ETextureFormat::kRGBA8_Unorm);
@@ -146,8 +193,6 @@ void DeferredRenderer::initGeometry()
 		float u, v;
 	};
 
-	// Triangle centered at local origin, in front of camera (LH +Z forward)
-	// Centroid is at (0, 0, 1), so world rotation spins around its own axis.
 	const Vertex vertices[3] =
 	{
 		{  0.0f,  0.6666667f, 1.0f,  0.5f, 0.0f },

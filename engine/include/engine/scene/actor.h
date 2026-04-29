@@ -20,15 +20,18 @@ enum class EMeshPrimitive
 
 struct MeshHandle
 {
+    std::string resource_path;
     EMeshPrimitive primitive = EMeshPrimitive::kTriangle;
+
+    bool hasResourcePath() const { return !resource_path.empty(); }
 };
 
 
 class Actor
 {
 public:
-    explicit Actor(std::string name = "actor")
-        : name_(std::move(name))
+    explicit Actor(const std::string& name = "actor")
+        : name_(name)
         , transform_(math::Transform::identity())
     {
     }
@@ -51,8 +54,8 @@ protected:
 class RenderableActor : public Actor
 {
 public:
-    explicit RenderableActor(std::string name = "renderable_actor")
-        : Actor(std::move(name))
+    explicit RenderableActor(const std::string& name = "renderable_actor")
+        : Actor(name)
     {
     }
 
@@ -69,8 +72,8 @@ private:
 class StaticMeshActor : public RenderableActor
 {
 public:
-    explicit StaticMeshActor(std::string name = "static_mesh_actor")
-        : RenderableActor(std::move(name))
+    explicit StaticMeshActor(const std::string& name = "static_mesh_actor")
+        : RenderableActor(name)
     {
     }
 

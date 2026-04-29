@@ -18,6 +18,12 @@
     <Filter Include="include\time">
       <UniqueIdentifier>{97dee3c7-a2f1-490c-8eea-f0ea282cb6a6}</UniqueIdentifier>
     </Filter>
+    <Filter Include="include\asset">
+      <UniqueIdentifier>{0e7417f1-0130-40cf-a366-d26e477ed632}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\asset">
+      <UniqueIdentifier>{ef50cdc5-93b1-4979-b946-f20b47c164fc}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\engine\core\utility\assert.h">
@@ -29,10 +35,16 @@
     <ClInclude Include="..\..\include\engine\core\time\time.h">
       <Filter>include\time</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\engine\core\asset\gltfloader.h">
+      <Filter>include\asset</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\utility.cpp">
       <Filter>source\utility</Filter>
+    </ClCompile>
+    <ClCompile Include="source\gltfloader.cpp">
+      <Filter>source\asset</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

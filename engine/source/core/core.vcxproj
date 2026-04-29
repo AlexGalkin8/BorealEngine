@@ -84,11 +84,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\include\engine\core\asset\gltfloader.h" />
     <ClInclude Include="..\..\include\engine\core\time\time.h" />
     <ClInclude Include="..\..\include\engine\core\utility\assert.h" />
     <ClInclude Include="..\..\include\engine\core\utility\utility.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="source\gltfloader.cpp" />
     <ClCompile Include="source\utility.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

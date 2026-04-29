@@ -41,6 +41,9 @@ public:
 protected:
 	IRenderer(IRenderDevice& render_device);
 
+	IRenderDevice& getRenderDevice() { return render_device_; }
+	const IRenderDevice& getRenderDevice() const { return render_device_; }
+
 protected:
 	IRenderDevice& render_device_;
 	IPipelineStateManager& pipeline_state_manager_;

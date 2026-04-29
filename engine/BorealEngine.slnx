@@ -4,7 +4,9 @@
   </Configurations>
   <Folder Name="/engine/">
     <File Path=".gitignore" />
-    <Project Path="source/core/core.vcxproj" Id="882bc60e-11db-4124-8e4a-dc803009814c" />
+    <Project Path="source/core/core.vcxproj" Id="882bc60e-11db-4124-8e4a-dc803009814c">
+      <BuildDependency Project="third_party/tinygltf/tinygltf.vcxproj" />
+    </Project>
     <Project Path="source/engine/engine.vcxproj" Id="35e9704b-aaa5-4204-9363-92b84c6a3faa">
       <BuildDependency Project="source/core/core.vcxproj" />
       <BuildDependency Project="source/platform/platform.vcxproj" />
