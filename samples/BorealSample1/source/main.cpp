@@ -44,10 +44,10 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 	std::shared_ptr<scene::Scene> default_scene = std::make_shared<scene::Scene>("default_scene");
 
 	default_scene->getCamera().setLookAt(
-		math::Vector3(0.0f, 0.0f, -2.0f),
-		math::Vector3(0.0f, 0.0f, 0.0f),
+		math::Vector3(0.0f, -100.7f, -10.0f),
+		math::Vector3(0.0f, -100.7f, 0.0f),
 		math::Vector3(0.0f, 1.0f, 0.0f));
-	default_scene->getCamera().setPerspective(math::radians(60.0f), 16.0f / 9.0f, 0.1f, 100.0f);
+	default_scene->getCamera().setPerspective(math::radians(90.0f), 16.0f / 9.0f, 0.1f, 500.0f);
 
 	const auto& renderables = default_scene->getRenderableActors();
 	if (!renderables.empty() && renderables[0])
@@ -55,8 +55,8 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 		auto static_mesh_actor = std::dynamic_pointer_cast<scene::StaticMeshActor>(renderables[0]);
 		if (static_mesh_actor)
 		{
-			static_mesh_actor->getTransform().position = math::Vector3(0.0f, 0.0f, 0.0f);
-			static_mesh_actor->getTransform().scale = math::Vector3(1.0f, 1.0f, 1.0f);
+			static_mesh_actor->getTransform().position = math::Vector3(0.0f, 0.0f, 20.0f);
+			static_mesh_actor->getTransform().scale = math::Vector3(0.7f, 0.7f, 0.7f);
 			static_mesh_actor->getMaterial().name = "default";
 		}
 	}

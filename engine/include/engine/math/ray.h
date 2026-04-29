@@ -97,4 +97,6 @@ struct Ray
     }
 };
 
+static_assert(sizeof(Ray) == sizeof(Vector3) * 2, "Ray size mismatch");
+
 } // namespace math

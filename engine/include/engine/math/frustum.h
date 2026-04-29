@@ -34,12 +34,12 @@ struct Frustum
         Frustum f;
 
         // Column-vector frustum extraction (using matrix rows via m[row][col])
-        f.planes[Left]   = Plane(Vector3(m[3][0] + m[0][0], m[3][1] + m[0][1], m[3][2] + m[0][2]), m[3][3] + m[0][3]).normalized();
-        f.planes[Right]  = Plane(Vector3(m[3][0] - m[0][0], m[3][1] - m[0][1], m[3][2] - m[0][2]), m[3][3] - m[0][3]).normalized();
-        f.planes[Bottom] = Plane(Vector3(m[3][0] + m[1][0], m[3][1] + m[1][1], m[3][2] + m[1][2]), m[3][3] + m[1][3]).normalized();
-        f.planes[Top]    = Plane(Vector3(m[3][0] - m[1][0], m[3][1] - m[1][1], m[3][2] - m[1][2]), m[3][3] - m[1][3]).normalized();
-        f.planes[Near]   = Plane(Vector3(m[3][0] + m[2][0], m[3][1] + m[2][1], m[3][2] + m[2][2]), m[3][3] + m[2][3]).normalized();
-        f.planes[Far]    = Plane(Vector3(m[3][0] - m[2][0], m[3][1] - m[2][1], m[3][2] - m[2][2]), m[3][3] - m[2][3]).normalized();
+        f.planes[Left]   = Plane(Vector3(m.m30 + m.m00, m.m31 + m.m01, m.m32 + m.m02), m.m33 + m.m03).normalized();
+        f.planes[Right]  = Plane(Vector3(m.m30 - m.m00, m.m31 - m.m01, m.m32 - m.m02), m.m33 - m.m03).normalized();
+        f.planes[Bottom] = Plane(Vector3(m.m30 + m.m10, m.m31 + m.m11, m.m32 + m.m12), m.m33 + m.m13).normalized();
+        f.planes[Top]    = Plane(Vector3(m.m30 - m.m10, m.m31 - m.m11, m.m32 - m.m12), m.m33 - m.m13).normalized();
+        f.planes[Near]   = Plane(Vector3(m.m30 + m.m20, m.m31 + m.m21, m.m32 + m.m22), m.m33 + m.m23).normalized();
+        f.planes[Far]    = Plane(Vector3(m.m30 - m.m20, m.m31 - m.m21, m.m32 - m.m22), m.m33 - m.m23).normalized();
 
         return f;
     }
@@ -80,5 +80,7 @@ struct Frustum
         return true;
     }
 };
+
+static_assert(sizeof(Frustum) == sizeof(Plane) * Frustum::Count, "Frustum size mismatch");
 
 } // namespace math

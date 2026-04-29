@@ -13,24 +13,117 @@
 
 namespace math::detail {
 
+template<typename T, uint32_t N>
+struct VectorStorage
+{
+	T data[N];
+	constexpr VectorStorage() : data{} {}
+};
+
+template<typename T>
+struct VectorStorage<T, 1>
+{
+	union
+	{
+		T data[1];
+		struct { T x; };
+	};
+	constexpr VectorStorage() : data{} {}
+};
+
+template<typename T>
+struct VectorStorage<T, 2>
+{
+	union
+	{
+		T data[2];
+		struct { T x, y; };
+	};
+	constexpr VectorStorage() : data{} {}
+};
+
+template<typename T>
+struct VectorStorage<T, 3>
+{
+	union
+	{
+		T data[3];
+		struct { T x, y, z; };
+	};
+	constexpr VectorStorage() : data{} {}
+};
+
+template<typename T>
+struct VectorStorage<T, 4>
+{
+	union
+	{
+		T data[4];
+		struct { T x, y, z, w; };
+		struct { T r, g, b, a; };
+	};
+	constexpr VectorStorage() : data{} {}
+};
+
 #ifndef USE_FAST_MATH_VECTOR
 
 // ============================================================================
 //  VectorSimple - plain loops
 // ============================================================================
 template<typename T, uint32_t N>
-struct VectorSimple
+struct VectorSimple : VectorStorage<T, N>
 {
+	using VectorStorage<T, N>::data;
 	static_assert(std::is_arithmetic_v<T>, "T must be arithmetic");
 	static_assert(N > 0, "N must be positive");
 
-	T data[N] = {};
-
 	constexpr VectorSimple() = default;
 
-	template<typename... Args,
-		typename = std::enable_if_t<sizeof...(Args) == N>>
-	constexpr VectorSimple(Args... args) : data{ static_cast<T>(args)... } {}
+	constexpr VectorSimple(T value)
+	{
+		for (uint32_t i = 0; i < N; i++)
+			data[i] = value;
+	}
+
+	template<typename... Args, typename = std::enable_if_t<sizeof...(Args) == N>>
+	constexpr VectorSimple(Args... args)
+	{
+		const T values[N] = { static_cast<T>(args)... };
+		for (uint32_t i = 0; i < N; i++)
+			data[i] = values[i];
+	}
+
+	constexpr VectorSimple(const VectorSimple& other)
+	{
+		for (uint32_t i = 0; i < N; i++)
+			data[i] = other.data[i];
+	}
+
+	constexpr VectorSimple(VectorSimple&& other) noexcept
+	{
+		for (uint32_t i = 0; i < N; i++)
+			data[i] = std::move(other.data[i]);
+	}
+
+	constexpr VectorSimple& operator=(const VectorSimple& other)
+	{
+		if (this != &other)
+		{
+			for (uint32_t i = 0; i < N; i++)
+				data[i] = other.data[i];
+		}
+		return *this;
+	}
+
+	constexpr VectorSimple& operator=(VectorSimple&& other) noexcept
+	{
+		if (this != &other)
+		{
+			for (uint32_t i = 0; i < N; i++)
+				data[i] = std::move(other.data[i]);
+		}
+		return *this;
+	}
 
 	constexpr T&       operator[](uint32_t i)       { ASSERT(i < N); return data[i]; }
 	constexpr const T& operator[](uint32_t i) const { ASSERT(i < N); return data[i]; }
@@ -126,18 +219,59 @@ constexpr bool foldEquals(const T* a, const T* b, std::index_sequence<I...>)
 
 
 template<typename T, uint32_t N>
-struct VectorUnrolled
+struct VectorUnrolled : VectorStorage<T, N>
 {
+	using VectorStorage<T, N>::data;
 	static_assert(std::is_arithmetic_v<T>, "T must be arithmetic");
 	static_assert(N > 0, "N must be positive");
 
-	T data[N] = {};
-
 	constexpr VectorUnrolled() = default;
 
-	template<typename... Args,
-		typename = std::enable_if_t<sizeof...(Args) == N>>
-	constexpr VectorUnrolled(Args... args) : data{ static_cast<T>(args)... } {}
+	constexpr VectorUnrolled(T value)
+	{
+		auto p = applyUnary<T, N>(data, [value](T) constexpr { return value; }, std::make_index_sequence<N>{});
+		for (uint32_t i = 0; i < N; i++) data[i] = p.data[i];
+	}
+
+	template<typename... Args, typename = std::enable_if_t<sizeof...(Args) == N>>
+	constexpr VectorUnrolled(Args... args)
+	{
+		const T values[N] = { static_cast<T>(args)... };
+		for (uint32_t i = 0; i < N; i++)
+			data[i] = values[i];
+	}
+
+	constexpr VectorUnrolled(const VectorUnrolled& other)
+	{
+		for (uint32_t i = 0; i < N; i++)
+			data[i] = other.data[i];
+	}
+
+	constexpr VectorUnrolled(VectorUnrolled&& other) noexcept
+	{
+		for (uint32_t i = 0; i < N; i++)
+			data[i] = std::move(other.data[i]);
+	}
+
+	constexpr VectorUnrolled& operator=(const VectorUnrolled& other)
+	{
+		if (this != &other)
+		{
+			for (uint32_t i = 0; i < N; i++)
+				data[i] = other.data[i];
+		}
+		return *this;
+	}
+
+	constexpr VectorUnrolled& operator=(VectorUnrolled&& other) noexcept
+	{
+		if (this != &other)
+		{
+			for (uint32_t i = 0; i < N; i++)
+				data[i] = std::move(other.data[i]);
+		}
+		return *this;
+	}
 
 	constexpr T&       operator[](uint32_t i)       { ASSERT(i < N); return data[i]; }
 	constexpr const T& operator[](uint32_t i) const { ASSERT(i < N); return data[i]; }
@@ -187,6 +321,16 @@ struct VectorUnrolled
 	constexpr T dot(const VectorUnrolled& v) const
 	{
 		return foldBinary<T>(data, v.data, [](T a, T b) constexpr { return a * b; }, std::make_index_sequence<N>{});
+	}
+
+	constexpr VectorUnrolled cross(const VectorUnrolled& v) const
+	{
+		static_assert(N == 3, "Cross product is only defined for 3D vectors");
+		return VectorUnrolled(
+			data[1] * v.data[2] - data[2] * v.data[1],
+			data[2] * v.data[0] - data[0] * v.data[2],
+			data[0] * v.data[1] - data[1] * v.data[0]
+		);
 	}
 
 	constexpr T lengthSq() const { return dot(*this); }
@@ -254,5 +398,15 @@ using Int4    = detail::Vector<int32_t,  4>;
 using UInt2   = detail::Vector<uint32_t, 2>;
 using UInt3   = detail::Vector<uint32_t, 3>;
 using UInt4   = detail::Vector<uint32_t, 4>;
+
+static_assert(sizeof(Vector2) == sizeof(float) * 2, "Vector2 size mismatch");
+static_assert(sizeof(Vector3) == sizeof(float) * 3, "Vector3 size mismatch");
+static_assert(sizeof(Vector4) == sizeof(float) * 4, "Vector4 size mismatch");
+static_assert(sizeof(Int2)    == sizeof(int32_t) * 2, "Int2 size mismatch");
+static_assert(sizeof(Int3)    == sizeof(int32_t) * 3, "Int3 size mismatch");
+static_assert(sizeof(Int4)    == sizeof(int32_t) * 4, "Int4 size mismatch");
+static_assert(sizeof(UInt2)   == sizeof(uint32_t) * 2, "UInt2 size mismatch");
+static_assert(sizeof(UInt3)   == sizeof(uint32_t) * 3, "UInt3 size mismatch");
+static_assert(sizeof(UInt4)   == sizeof(uint32_t) * 4, "UInt4 size mismatch");
 
 } // namespace math

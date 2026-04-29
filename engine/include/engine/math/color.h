@@ -26,27 +26,32 @@ namespace constants {
 
 struct Color
 {
-    Vector4 rgba;
+    float r;
+    float g;
+    float b;
+    float a;
 
     // Constructors
-    constexpr Color()                                            : rgba(0.0f, 0.0f, 0.0f, 1.0f) {}
-    constexpr Color(float r, float g, float b, float a = 1.0f)   : rgba(r, g, b, a) {}
-    constexpr explicit Color(const Vector4& v)                   : rgba(v) {}
-    constexpr explicit Color(const Vector3& rgb, float a = 1.0f) : rgba(rgb[0], rgb[1], rgb[2], a) {}
+    constexpr Color()
+        : r(0.0f), g(0.0f), b(0.0f), a(1.0f) {}
 
-    // Channel accessors
-    constexpr float  r() const { return rgba[0]; }
-    constexpr float  g() const { return rgba[1]; }
-    constexpr float  b() const { return rgba[2]; }
-    constexpr float  a() const { return rgba[3]; }
-    constexpr float& r()       { return rgba[0]; }
-    constexpr float& g()       { return rgba[1]; }
-    constexpr float& b()       { return rgba[2]; }
-    constexpr float& a()       { return rgba[3]; }
+    constexpr Color(float r, float g, float b, float a = 1.0f)
+        : r(r), g(g), b(b), a(a) {}
+
+    constexpr explicit Color(const Vector4& v)
+        : r(v.x), g(v.y), b(v.z), a(v.w) {}
+
+    constexpr explicit Color(const Vector3& rgb, float a = 1.0f)
+        : r(rgb.x), g(rgb.y), b(rgb.z), a(a) {}
+
+    constexpr Color(const Color&) = default;
+    constexpr Color(Color&&) noexcept = default;
+    constexpr Color& operator=(const Color&) = default;
+    constexpr Color& operator=(Color&&) noexcept = default;
 
     // Conversions
-    constexpr Vector4 toVector4() const { return rgba; }
-    constexpr Vector3 toVector3() const { return Vector3(rgba[0], rgba[1], rgba[2]); }
+    constexpr Vector4 toVector4() const { return Vector4(r, g, b, a); }
+    constexpr Vector3 toVector3() const { return Vector3(r, g, b); }
 
     // Pack to 32-bit 0xRRGGBBAA
     constexpr uint32_t toRGBA8() const
@@ -54,7 +59,7 @@ struct Color
         auto pack = [](float v) constexpr -> uint32_t {
             return static_cast<uint32_t>(v <= 0.0f ? 0u : v >= 1.0f ? 255u : static_cast<uint32_t>(v * 255.0f + 0.5f));
         };
-        return (pack(rgba[0]) << 24) | (pack(rgba[1]) << 16) | (pack(rgba[2]) << 8) | pack(rgba[3]);
+        return (pack(r) << 24) | (pack(g) << 16) | (pack(b) << 8) | pack(a);
     }
 
     // Unpack from 32-bit 0xRRGGBBAA
@@ -69,39 +74,44 @@ struct Color
         );
     }
 
-    // Arithmetic operators — delegate to Vector4
-    constexpr Color operator+(const Color& c) const { return Color(rgba + c.rgba); }
-    constexpr Color operator-(const Color& c) const { return Color(rgba - c.rgba); }
-    constexpr Color operator*(float s)        const { return Color(rgba * s); }
-    constexpr Color operator/(float s)        const { return Color(rgba / s); }
+    // Arithmetic operators
+    constexpr Color operator+(const Color& c) const { return Color(r + c.r, g + c.g, b + c.b, a + c.a); }
+    constexpr Color operator-(const Color& c) const { return Color(r - c.r, g - c.g, b - c.b, a - c.a); }
+    constexpr Color operator*(float s)        const { return Color(r * s, g * s, b * s, a * s); }
+    constexpr Color operator/(float s)        const { return Color(r / s, g / s, b / s, a / s); }
 
     // Component-wise multiply (tinting)
     constexpr Color operator*(const Color& c) const
     {
-        return Color(rgba[0] * c.rgba[0], rgba[1] * c.rgba[1], rgba[2] * c.rgba[2], rgba[3] * c.rgba[3]);
+        return Color(r * c.r, g * c.g, b * c.b, a * c.a);
     }
 
-    constexpr Color& operator+=(const Color& c) { rgba += c.rgba; return *this; }
-    constexpr Color& operator-=(const Color& c) { rgba -= c.rgba; return *this; }
-    constexpr Color& operator*=(float s)        { rgba *= s;      return *this; }
-    constexpr Color& operator/=(float s)        { rgba /= s;      return *this; }
+    constexpr Color& operator+=(const Color& c) { r += c.r; g += c.g; b += c.b; a += c.a; return *this; }
+    constexpr Color& operator-=(const Color& c) { r -= c.r; g -= c.g; b -= c.b; a -= c.a; return *this; }
+    constexpr Color& operator*=(float s)        { r *= s; g *= s; b *= s; a *= s; return *this; }
+    constexpr Color& operator/=(float s)        { r /= s; g /= s; b /= s; a /= s; return *this; }
 
-    constexpr bool operator==(const Color& c) const { return rgba == c.rgba; }
-    constexpr bool operator!=(const Color& c) const { return rgba != c.rgba; }
+    constexpr bool operator==(const Color& c) const { return r == c.r && g == c.g && b == c.b && a == c.a; }
+    constexpr bool operator!=(const Color& c) const { return !(*this == c); }
 
     // Clamp all channels to [0, 1]
     constexpr Color saturate() const
     {
-        return Color(
-            Vector4::min(Vector4::max(rgba, Vector4(0.0f, 0.0f, 0.0f, 0.0f)),
-                                      Vector4(1.0f, 1.0f, 1.0f, 1.0f))
-        );
+        auto clamp01 = [](float v) constexpr {
+            return v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v);
+        };
+        return Color(clamp01(r), clamp01(g), clamp01(b), clamp01(a));
     }
 
     // Linear interpolation
-    static constexpr Color lerp(const Color& a, const Color& b, float t)
+    static constexpr Color lerp(const Color& aColor, const Color& bColor, float t)
     {
-        return Color(Vector4::lerp(a.rgba, b.rgba, t));
+        return Color(
+            aColor.r + (bColor.r - aColor.r) * t,
+            aColor.g + (bColor.g - aColor.g) * t,
+            aColor.b + (bColor.b - aColor.b) * t,
+            aColor.a + (bColor.a - aColor.a) * t
+        );
     }
 
     // Linear -> sRGB
@@ -112,7 +122,7 @@ struct Color
                 ? v * constants::kSRGBLinearScale
                 : constants::kSRGBA * std::pow(v, constants::kInvSRGBGamma) - constants::kSRGBB;
         };
-        return Color(encode(rgba[0]), encode(rgba[1]), encode(rgba[2]), rgba[3]);
+        return Color(encode(r), encode(g), encode(b), a);
     }
 
     // sRGB -> linear
@@ -123,7 +133,7 @@ struct Color
                 ? v / constants::kSRGBLinearScale
                 : std::pow((v + constants::kSRGBB) / constants::kSRGBA, constants::kSRGBGamma);
         };
-        return Color(decode(rgba[0]), decode(rgba[1]), decode(rgba[2]), rgba[3]);
+        return Color(decode(r), decode(g), decode(b), a);
     }
 
     // ============================================================================
@@ -138,9 +148,11 @@ struct Color
     static constexpr Color yellow()      { return {1.0f, 1.0f, 0.0f}; }
     static constexpr Color cyan()        { return {0.0f, 1.0f, 1.0f}; }
     static constexpr Color magenta()     { return {1.0f, 0.0f, 1.0f}; }
-    static constexpr Color transparent() { return {0.0f, 0.0f, 0.0f, 0.0f}; }
+    static constexpr Color transparent() { return {0.0f, 0.0f, 0.0f, 0.0f}; }   
 };
 
 constexpr Color operator*(float s, const Color& c) { return c * s; }
+
+static_assert(sizeof(Color) == sizeof(float) * 4, "Color size mismatch");
 
 } // namespace math

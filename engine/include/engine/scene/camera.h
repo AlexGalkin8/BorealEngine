@@ -41,14 +41,14 @@ public:
 private:
 	void rebuild();
 
-	math::Vector3 eye_;
-	math::Vector3 target_;
-	math::Vector3 up_;
+	math::Vector3 eye_;     // Camera position in world space
+	math::Vector3 target_;  // Point the camera is looking at in world space
+	math::Vector3 up_;      // Up direction vector defining camera orientation
 
-	float fovYRadians_;
-	float aspect_;
-	float zNear_;
-	float zFar_;
+	float fovYRadians_;  // Field of view in the Y direction, in radians
+	float aspect_;       // Aspect ratio of the camera (width / height)
+	float zNear_;        // Near clipping plane distance
+	float zFar_;         // Far clipping plane distance
 
 	math::Matrix4x4 view_;
 	math::Matrix4x4 projection_;

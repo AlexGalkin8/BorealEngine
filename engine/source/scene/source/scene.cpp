@@ -13,8 +13,7 @@ Scene::Scene(const std::string& name)
 	, actors_{}
 	, renderable_actors_{}
 {
-	auto actor = std::make_shared<RotatingActor>("main_actor", math::Vector3(0.0f, 0.0f, 1.0f));
-	actor->getTransform() = math::Transform::identity();
+	auto actor = std::make_shared<RotatingActor>("main_actor", math::Vector3(0.0f, 1.0f, 0.0f));
 	addActor(actor);
 }
 

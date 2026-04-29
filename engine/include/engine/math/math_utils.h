@@ -43,4 +43,15 @@ constexpr float smoothstep(float edge0, float edge1, float x)
     return t * t * (3.0f - 2.0f * t);
 }
 
+
+constexpr Vector3 cross(const Vector3& x, const Vector3& y) {return x.cross(y); }
+
+
+template<typename T>
+constexpr float dot(const T& x, const T& y) { return x.dot(y); }
+
+
+template<typename T>
+constexpr T normalize(T x) { return x.normalize(); }
+
 } // namespace math

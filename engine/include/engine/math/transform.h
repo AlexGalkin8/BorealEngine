@@ -33,45 +33,49 @@ struct Transform
 		static_assert(conventions::kVectorConvention == conventions::VectorConvention::ColumnVector);
 
 		// Column-vector convention: M = T * R * S
-		Matrix4x4 m = rotation.toMatrix4x4(); // R
+		Matrix4x4 rotationMatrix = rotation.toMatrix4x4();
 
-		// R * S (scale matrix columns)
-		m[0][0] *= scale[0]; m[0][1] *= scale[1]; m[0][2] *= scale[2];
-		m[1][0] *= scale[0]; m[1][1] *= scale[1]; m[1][2] *= scale[2];
-		m[2][0] *= scale[0]; m[2][1] *= scale[1]; m[2][2] *= scale[2];
+		Matrix4x4 scaleMatrix = {
+			scale.x, 0.0f,   0.0f,   0.0f,
+			0.0f,   scale.y, 0.0f,   0.0f,
+			0.0f,   0.0f,   scale.z, 0.0f,
+			0.0f,   0.0f,   0.0f,   1.0f
+		};
 
-		// T * (R * S): translation in the last column
-		m[0][3] = position[0];
-		m[1][3] = position[1];
-		m[2][3] = position[2];
-		m[3][0] = 0.0f;
-		m[3][1] = 0.0f;
-		m[3][2] = 0.0f;
-		m[3][3] = 1.0f;
-		return m;
+		Matrix4x4 translationMatrix = {
+			1.0f, 0.0f, 0.0f, position.x,
+			0.0f, 1.0f, 0.0f, position.y,
+			0.0f, 0.0f, 1.0f, position.z,
+			0.0f, 0.0f, 0.0f, 1.0f
+		};
+
+		return translationMatrix * rotationMatrix * scaleMatrix;
 	}
 
 	Vector3 transformPoint(const Vector3& p) const
 	{
-		Vector3 scaled(p[0] * scale[0], p[1] * scale[1], p[2] * scale[2]);
+	  Vector3 scaled(p.x * scale.x, p.y * scale.y, p.z * scale.z);
 		return rotation.rotateVector(scaled) + position;
 	}
 
 	Vector3 transformDirection(const Vector3& d) const
 	{
-		Vector3 scaled(d[0] * scale[0], d[1] * scale[1], d[2] * scale[2]);
+		Vector3 scaled(d.x * scale.x, d.y * scale.y, d.z * scale.z);
 		return rotation.rotateVector(scaled);
 	}
 
 	Transform operator*(const Transform& rhs) const
 	{
 		Transform out;
-		out.scale = Vector3(scale[0] * rhs.scale[0], scale[1] * rhs.scale[1], scale[2] * rhs.scale[2]);
+		out.scale = Vector3(scale.x * rhs.scale.x, scale.y * rhs.scale.y, scale.z * rhs.scale.z);
 		out.rotation = (rotation * rhs.rotation).normalized();
-		Vector3 rhsPosScaled(rhs.position[0] * scale[0], rhs.position[1] * scale[1], rhs.position[2] * scale[2]);
+		Vector3 rhsPosScaled(rhs.position.x * scale.x, rhs.position.y * scale.y, rhs.position.z * scale.z);
 		out.position = position + rotation.rotateVector(rhsPosScaled);
 		return out;
 	}
 };
+
+static_assert(sizeof(Transform) == sizeof(Vector3) + sizeof(Quaternion) + sizeof(Vector3), "Transform size mismatch");
+static_assert(std::is_standard_layout_v<Transform>, "Transform must be standard layout");
 
 } // namespace math

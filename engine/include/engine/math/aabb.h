@@ -97,5 +97,7 @@ struct AABB
 	}
 };
 
+static_assert(sizeof(AABB) == sizeof(Vector3) * 2, "AABB size mismatch");
+
 } // namespace math
 

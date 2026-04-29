@@ -84,7 +84,7 @@ struct Quaternion
 		float half = radians * 0.5f;
 		float s = std::sin(half);
 		float c = std::cos(half);
-		return Quaternion(axis[0] * invLen * s, axis[1] * invLen * s, axis[2] * invLen * s, c);
+	 return Quaternion(axis.x * invLen * s, axis.y * invLen * s, axis.z * invLen * s, c);
 	}
 
 	// Rotation order: X (pitch) then Y (yaw) then Z (roll)
@@ -107,9 +107,9 @@ struct Quaternion
 	static Vector3 cross(const Vector3& a, const Vector3& b)
 	{
 		return Vector3(
-			a[1] * b[2] - a[2] * b[1],
-			a[2] * b[0] - a[0] * b[2],
-			a[0] * b[1] - a[1] * b[0]
+			a.y * b.z - a.z * b.y,
+			a.z * b.x - a.x * b.z,
+			a.x * b.y - a.y * b.x
 		);
 	}
 
@@ -133,22 +133,19 @@ struct Quaternion
 		float wy = q.w * q.y;
 		float wz = q.w * q.z;
 
-		Matrix4x4 m = Matrix4x4::identity();
-		m[0][0] = 1.0f - 2.0f * (yy + zz);
-		m[0][1] = 2.0f * (xy - wz);
-		m[0][2] = 2.0f * (xz + wy);
+		Matrix4x4 rotationMatrix = {
+			1.0f - 2.0f * (yy + zz), 2.0f * (xy - wz),        2.0f * (xz + wy),        0.0f,
+			2.0f * (xy + wz),        1.0f - 2.0f * (xx + zz), 2.0f * (yz - wx),        0.0f,
+			2.0f * (xz - wy),        2.0f * (yz + wx),        1.0f - 2.0f * (xx + yy), 0.0f,
+			0.0f,                    0.0f,                    0.0f,                    1.0f
+		};
 
-		m[1][0] = 2.0f * (xy + wz);
-		m[1][1] = 1.0f - 2.0f * (xx + zz);
-		m[1][2] = 2.0f * (yz - wx);
-
-		m[2][0] = 2.0f * (xz - wy);
-		m[2][1] = 2.0f * (yz + wx);
-		m[2][2] = 1.0f - 2.0f * (xx + yy);
-		return m;
+		return rotationMatrix;
 	}
 };
 
 constexpr Quaternion operator*(float s, const Quaternion& q) { return q * s; }
+
+static_assert(sizeof(Quaternion) == sizeof(float) * 4, "Quaternion size mismatch");
 
 } // namespace math
