@@ -28,11 +28,29 @@ ITexture* D3D12ResourceManager::createTexture(const ITexture::Desc& desc)
 	resource_desc.SampleDesc.Count = 1;
 	resource_desc.SampleDesc.Quality = 0;
 	resource_desc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-	resource_desc.Flags = D3D12_RESOURCE_FLAG_NONE;
 	resource_desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
 
+	D3D12_RESOURCE_STATES initial_state = D3D12_RESOURCE_STATE_COPY_DEST;
+	D3D12_CLEAR_VALUE* clear_value_ptr = nullptr;
+	D3D12_CLEAR_VALUE clear_value = {};
+
+	if (desc.format == ETextureFormat::D16_Unorm || desc.format == ETextureFormat::D24_Unorm_S8_Uint || desc.format == ETextureFormat::D32_Float)
+	{
+		resource_desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+		initial_state = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+
+		clear_value.Format = resource_desc.Format;
+		clear_value.DepthStencil.Depth = 1.0f;
+		clear_value.DepthStencil.Stencil = 0;
+		clear_value_ptr = &clear_value;
+	}
+	else
+	{
+		resource_desc.Flags = D3D12_RESOURCE_FLAG_NONE;
+	}
+
 	D3D12_ASSERT_RETURN_NULL(getRenderDevice().getDevice()->CreateCommittedResource(
-		&HeapProps, D3D12_HEAP_FLAG_NONE, &resource_desc, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&resource)));
+		&HeapProps, D3D12_HEAP_FLAG_NONE, &resource_desc, initial_state, clear_value_ptr, IID_PPV_ARGS(&resource)));
 
 	D3D12Texture* texture = new D3D12Texture(desc, resource.Detach());
 	resources_.insert(texture);

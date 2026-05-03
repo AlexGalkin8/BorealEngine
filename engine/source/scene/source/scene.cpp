@@ -1,6 +1,5 @@
 #include "scene.h"
 #include "camera.h"
-#include "actor.hpp"
 
 #include <algorithm>
 
@@ -11,10 +10,8 @@ Scene::Scene(const std::string& name)
 	: name_(name)
 	, camera_(std::make_unique<Camera>())
 	, actors_{}
-	, renderable_actors_{}
+	, static_mesh_actors_{}
 {
-	auto actor = std::make_shared<RotatingActor>("main_actor", math::Vector3(0.0f, 1.0f, 0.0f));
-	addActor(actor);
 }
 
 
@@ -59,9 +56,9 @@ void Scene::addActor(const std::shared_ptr<Actor>& actor)
 
 	actors_.push_back(actor);
 
-	if (auto renderable = std::dynamic_pointer_cast<RenderableActor>(actor))
+	if (auto static_mesh_actor = std::dynamic_pointer_cast<StaticMeshActor>(actor))
 	{
-		renderable_actors_.push_back(renderable);
+		static_mesh_actors_.push_back(static_mesh_actor);
 	}
 }
 
@@ -71,17 +68,17 @@ void Scene::removeActor(const std::shared_ptr<Actor>& actor)
 	auto actor_it = std::remove(actors_.begin(), actors_.end(), actor);
 	actors_.erase(actor_it, actors_.end());
 
-	if (auto renderable = std::dynamic_pointer_cast<RenderableActor>(actor))
+	if (auto static_mesh_actor = std::dynamic_pointer_cast<StaticMeshActor>(actor))
 	{
-		auto rend_it = std::remove(renderable_actors_.begin(), renderable_actors_.end(), renderable);
-		renderable_actors_.erase(rend_it, renderable_actors_.end());
+		auto mesh_it = std::remove(static_mesh_actors_.begin(), static_mesh_actors_.end(), static_mesh_actor);
+		static_mesh_actors_.erase(mesh_it, static_mesh_actors_.end());
 	}
 }
 
 
-const std::vector<std::shared_ptr<RenderableActor>>& Scene::getRenderableActors() const
+const std::vector<std::shared_ptr<StaticMeshActor>>& Scene::getStaticMeshActors() const
 {
-	return renderable_actors_;
+	return static_mesh_actors_;
 }
 
 }  // namespace scene

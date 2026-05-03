@@ -87,12 +87,14 @@
     <ClCompile Include="source\camera.cpp" />
     <ClCompile Include="source\scene.cpp" />
     <ClCompile Include="source\sceneloader.cpp" />
+    <ClCompile Include="source\resourcemanager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\engine\scene\actor.h" />
     <ClInclude Include="..\..\include\engine\scene\camera.h" />
     <ClInclude Include="..\..\include\engine\scene\scene.h" />
     <ClInclude Include="..\..\include\engine\scene\sceneloader.h" />
+    <ClInclude Include="..\..\include\engine\scene\resourcemanager.h" />
     <ClInclude Include="source\actor.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

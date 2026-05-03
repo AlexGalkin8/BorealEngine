@@ -17,5 +17,6 @@
     <ClCompile Include="source\engine.cpp">
       <Filter>source</Filter>
     </ClCompile>
+    <ClCompile Include="source\settings.cpp" />
   </ItemGroup>
 </Project>

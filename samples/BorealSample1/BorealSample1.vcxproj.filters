@@ -12,5 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include=".gitignore" />
+    <None Include="data\scenes\default_scene.json" />
+    <None Include="data\settings.json" />
   </ItemGroup>
 </Project>

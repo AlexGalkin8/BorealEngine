@@ -44,8 +44,9 @@ public:
     void transitionTexture(ITexture& texture, EResourceState from, EResourceState to) override;
 
     // Output
-    void setRenderTarget(ITexture& render_target) override;
+    void setRenderTarget(ITexture& render_target, ITexture* depth_stencil = nullptr) override;
     void clearRenderTarget(ITexture& render_target, float r, float g, float b, float a) override;
+    void clearDepthStencil(ITexture& depth_stencil, float depth = 1.0f, uint8_t stencil = 0) override;
     void setViewport(float x, float y, float width, float height) override;
     void setScissorRect(int32_t left, int32_t top, int32_t right, int32_t bottom) override;
 

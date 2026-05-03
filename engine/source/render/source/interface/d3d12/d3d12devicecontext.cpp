@@ -162,7 +162,7 @@ void D3D12DeviceContext::transitionTexture(ITexture& texture, EResourceState fro
 
 // Output --------------------------------------------------------------------
 
-void D3D12DeviceContext::setRenderTarget(ITexture& render_target)
+void D3D12DeviceContext::setRenderTarget(ITexture& render_target, ITexture* depth_stencil)
 {
     D3D12Texture& d3d12_texture = static_cast<D3D12Texture&>(render_target);
 
@@ -177,6 +177,17 @@ void D3D12DeviceContext::setRenderTarget(ITexture& render_target)
     rtv_handle.ptr += static_cast<SIZE_T>(heap_index) * rtv_descriptor_size;
 
     device.getDevice()->CreateRenderTargetView(d3d12_texture.getResource(), nullptr, rtv_handle);
+
+    if (depth_stencil != nullptr)
+    {
+        D3D12Texture& d3d12_depth_texture = static_cast<D3D12Texture&>(*depth_stencil);
+
+        D3D12_CPU_DESCRIPTOR_HANDLE dsv_handle = device.getDsvHeap()->GetCPUDescriptorHandleForHeapStart();
+        device.getDevice()->CreateDepthStencilView(d3d12_depth_texture.getResource(), nullptr, dsv_handle);
+
+        command_list_->OMSetRenderTargets(1, &rtv_handle, FALSE, &dsv_handle);
+        return;
+    }
 
     command_list_->OMSetRenderTargets(1, &rtv_handle, FALSE, nullptr);
 }
@@ -197,6 +208,18 @@ void D3D12DeviceContext::clearRenderTarget(ITexture& render_target, float r, flo
 
     const float clear_color[] = { r, g, b, a };
     command_list_->ClearRenderTargetView(rtv_handle, clear_color, 0, nullptr);
+}
+
+
+void D3D12DeviceContext::clearDepthStencil(ITexture& depth_stencil, float depth, uint8_t stencil)
+{
+    D3D12Texture& d3d12_texture = static_cast<D3D12Texture&>(depth_stencil);
+    D3D12RenderDevice& device = getRenderDevice();
+
+    D3D12_CPU_DESCRIPTOR_HANDLE dsv_handle = device.getDsvHeap()->GetCPUDescriptorHandleForHeapStart();
+    device.getDevice()->CreateDepthStencilView(d3d12_texture.getResource(), nullptr, dsv_handle);
+
+    command_list_->ClearDepthStencilView(dsv_handle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, depth, stencil, 0, nullptr);
 }
 
 

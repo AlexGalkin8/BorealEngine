@@ -18,6 +18,9 @@
     <ClCompile Include="source\sceneloader.cpp">
       <Filter>source</Filter>
     </ClCompile>
+    <ClCompile Include="source\resourcemanager.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\engine\scene\actor.h">
@@ -34,6 +37,9 @@
     </ClInclude>
     <ClInclude Include="source\actor.hpp">
       <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\engine\scene\resourcemanager.h">
+      <Filter>include</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

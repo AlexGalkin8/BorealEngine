@@ -57,8 +57,9 @@ public:
     virtual void transitionTexture(ITexture& texture, EResourceState from, EResourceState to) = 0;
 
     // Output
-    virtual void setRenderTarget(ITexture& render_target) = 0;
+    virtual void setRenderTarget(ITexture& render_target, ITexture* depth_stencil = nullptr) = 0;
     virtual void clearRenderTarget(ITexture& render_target, float r, float g, float b, float a) = 0;
+    virtual void clearDepthStencil(ITexture& depth_stencil, float depth = 1.0f, uint8_t stencil = 0) = 0;
     virtual void setViewport(float x, float y, float width, float height) = 0;
     virtual void setScissorRect(int32_t left, int32_t top, int32_t right, int32_t bottom) = 0;
 

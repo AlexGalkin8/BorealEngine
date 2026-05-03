@@ -1,5 +1,7 @@
 #pragma once
 
+#include <engine/math/vector.h>
+
 #include <cmath>
 #include <cstdint>
 

@@ -1,0 +1,7 @@
+{
+  "data_root_path": "data",
+  "default_scene_name": "default_scene",
+  "window_name": "BorealEngine",
+  "window_width": 1280,
+  "window_height": 720
+}

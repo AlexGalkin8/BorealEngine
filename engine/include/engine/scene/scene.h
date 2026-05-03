@@ -32,13 +32,13 @@ public:
     void addActor(const std::shared_ptr<Actor>& actor);
     void removeActor(const std::shared_ptr<Actor>& actor);
 
-    const std::vector<std::shared_ptr<RenderableActor>>& getRenderableActors() const;
+    const std::vector<std::shared_ptr<StaticMeshActor>>& getStaticMeshActors() const;
 
 private:
     const std::string name_;
     std::unique_ptr<scene::Camera> camera_;
     std::vector<std::shared_ptr<Actor>> actors_;
-    std::vector<std::shared_ptr<RenderableActor>> renderable_actors_;
+    std::vector<std::shared_ptr<StaticMeshActor>> static_mesh_actors_;
 };
 
 }  // namespace scene

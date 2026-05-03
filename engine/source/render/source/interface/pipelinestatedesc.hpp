@@ -16,6 +16,24 @@
 
 namespace render {
 
+inline constexpr uint32_t getVertexAttributeFormatSize(ETextureFormat format)
+{
+	switch (format)
+	{
+	case ETextureFormat::kRG8_Unorm:      return 2;
+	case ETextureFormat::kRGBA8_Unorm:    return 4;
+	case ETextureFormat::kRGBA8_Unorm_Srgb:return 4;
+	case ETextureFormat::kRGBA8_Snorm:    return 4;
+	case ETextureFormat::kRG16_Float:     return 4;
+	case ETextureFormat::kRGBA16_Float:   return 8;
+	case ETextureFormat::kRGBA16_SNorm:   return 8;
+	case ETextureFormat::kRG32_Float:     return 8;
+	case ETextureFormat::kRGB32_Float:    return 12;
+	case ETextureFormat::kRGBA32_Float:   return 16;
+	default:                              return 0;
+	}
+}
+
 class IShader;
 
 
@@ -181,7 +199,16 @@ struct InputAssemblerState
 		}));
 
 		attribute.input_slot = input_slot;
-		attribute.aligned_byte_offset = 0;  // This will be calculated later based on the format size and previous attributes
+
+		uint32_t aligned_byte_offset = 0;
+		for (const VertexAttribute& existing_attribute : vertex_attributes)
+		{
+			if (existing_attribute.input_slot == input_slot)
+			{
+				aligned_byte_offset += getVertexAttributeFormatSize(existing_attribute.format);
+			}
+		}
+		attribute.aligned_byte_offset = aligned_byte_offset;
 
 		vertex_attributes.push_back(attribute);
 	}
