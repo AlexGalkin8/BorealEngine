@@ -18,10 +18,10 @@ inline Matrix4x4 lookAtLH(const Vector3& eye, const Vector3& target, const Vecto
 	Vector3 u = cross(f, r);
 
 	Matrix4x4 m = {
-		 r.x,          u.x,          f.x,         0.0f,
-		 r.y,          u.y,          f.y,         0.0f,
-		 r.z,          u.z,          f.z,         0.0f,
-		-dot(r, eye), -dot(u, eye), -dot(f, eye), 1.0f
+		r.x, u.x, f.x, -dot(r, eye),
+		r.y, u.y, f.y, -dot(u, eye),
+		r.z, u.z, f.z, -dot(f, eye),
+		0.0f, 0.0f, 0.0f, 1.0f
 	};
 
 	return m;
@@ -37,13 +37,13 @@ inline Matrix4x4 perspectiveFovLH(float fovYRadians, float aspect, float zNear, 
 	float yScale = 1.0f / std::tan(fovYRadians * 0.5f);
 	float xScale = yScale / aspect;
 	float zTransform = zFar / (zFar - zNear);
-	float zTranslate = zNear * zTransform;
+	float zTranslate = -zNear * zTransform;
 
 	Matrix4x4 m = {
 		xScale,     0.0f,   0.0f,        0.0f,
 		0.0f,       yScale, 0.0f,        0.0f,
-		0.0f,       0.0f,   zTransform,  1.0f,
-		0.0f,       0.0f,   zTranslate,  0.0f
+		0.0f,       0.0f,   zTransform,  zTranslate,
+		0.0f,       0.0f,   1.0f,        0.0f
 	};
 
 	return m;
