@@ -85,6 +85,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="source\camera.cpp" />
+    <ClCompile Include="source\fpscamera.cpp" />
     <ClCompile Include="source\scene.cpp" />
     <ClCompile Include="source\sceneloader.cpp" />
     <ClCompile Include="source\resourcemanager.cpp" />

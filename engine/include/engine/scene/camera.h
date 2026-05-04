@@ -7,11 +7,17 @@
 
 namespace scene {
 
+enum class ECameraType
+{
+	kBase,
+	kFps,
+};
+
 class Camera
 {
 public:
 	Camera();
-	~Camera() = default;
+	virtual ~Camera() = default;
 
 	void setLookAt(const math::Vector3& eye, const math::Vector3& target, const math::Vector3& up);
 	void setPerspective(float fovYRadians, float aspect, float zNear, float zFar);
@@ -23,6 +29,12 @@ public:
 	void setAspect(float aspect);
 	void setFovY(float fovYRadians);
 	void setNearFar(float zNear, float zFar);
+
+	// Rotate camera by yaw (world Y axis) and pitch (camera right axis), degrees
+	void rotate(float yawDegrees, float pitchDegrees);
+
+	// Move camera along its local axes: forward/right/up
+	void move(float forward, float right, float up);
 
 	const math::Vector3& getPosition() const { return eye_; }
 	const math::Vector3& getTarget() const { return target_; }
@@ -38,22 +50,33 @@ public:
 	const math::Matrix4x4& getViewProjectionMatrix() const { return viewProjection_; }
 	const math::Frustum& getFrustum() const { return frustum_; }
 
+	virtual ECameraType getType() const { return ECameraType::kBase; }
+
+	virtual void update(double dt) {}
+
 private:
 	void rebuild();
+	// Rebuild target_ from eye_, yaw_, pitch_ and distance_
+	void rebuildFromAngles();
 
 	math::Vector3 eye_;     // Camera position in world space
 	math::Vector3 target_;  // Point the camera is looking at in world space
 	math::Vector3 up_;      // Up direction vector defining camera orientation
 
-	float fovYRadians_;  // Field of view in the Y direction, in radians
-	float aspect_;       // Aspect ratio of the camera (width / height)
-	float zNear_;        // Near clipping plane distance
-	float zFar_;         // Far clipping plane distance
+	float yaw_;    // Horizontal angle, radians, around world Y
+	float pitch_;  // Vertical angle, radians, clamped to +-89 deg
+
+	float fovYRadians_;
+	float aspect_;
+	float zNear_;
+	float zFar_;
 
 	math::Matrix4x4 view_;
 	math::Matrix4x4 projection_;
 	math::Matrix4x4 viewProjection_;
 	math::Frustum frustum_;
+
+	ECameraType type_;
 };
 
 }  // namespace scene

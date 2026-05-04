@@ -18,9 +18,9 @@ inline Matrix4x4 lookAtLH(const Vector3& eye, const Vector3& target, const Vecto
 	Vector3 u = cross(f, r);
 
 	Matrix4x4 m = {
-		r.x, u.x, f.x, -dot(r, eye),
-		r.y, u.y, f.y, -dot(u, eye),
-		r.z, u.z, f.z, -dot(f, eye),
+		r.x, r.y, r.z, -dot(r, eye),
+		u.x, u.y, u.z, -dot(u, eye),
+		f.x, f.y, f.z, -dot(f, eye),
 		0.0f, 0.0f, 0.0f, 1.0f
 	};
 

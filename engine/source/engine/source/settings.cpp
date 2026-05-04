@@ -119,6 +119,12 @@ std::unique_ptr<engine::Settings> engine::loadSettingsFromFile(const std::string
 		settings->default_scene_name = default_scene_name;
 	}
 
+	const std::string input_config_name = extractStringValue(text, "input_config_name");
+	if (!input_config_name.empty())
+	{
+		settings->input_config_name = input_config_name;
+	}
+
 	const std::string window_name_utf8 = extractStringValue(text, "window_name");
 	if (!window_name_utf8.empty())
 	{

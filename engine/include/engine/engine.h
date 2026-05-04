@@ -11,6 +11,7 @@
 
 namespace platform {
 class IWindow;
+class IInput;
 }  // namespace platform
 
 namespace scene {
@@ -31,6 +32,8 @@ public:
 	static std::unique_ptr<Engine> create(const std::string& settings_file_name, std::vector<std::wstring>&& cmd_args = {});
 
 	void run();
+
+	platform::IInput* getInput() const { return input_.get(); }
 
 	~Engine();
 
@@ -53,6 +56,7 @@ private:
 	std::unique_ptr<engine::Settings> settings_;
 
 	std::unique_ptr<platform::IWindow> window_;
+	std::unique_ptr<platform::IInput>  input_;
 
 	std::unique_ptr<render::IRenderDevice> render_device_;
 	std::unique_ptr<render::ISwapChain> swap_chain_;

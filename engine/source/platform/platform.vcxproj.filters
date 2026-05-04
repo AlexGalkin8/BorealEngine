@@ -17,5 +17,6 @@
     <ClCompile Include="source\window.cpp">
       <Filter>source</Filter>
     </ClCompile>
+    <ClCompile Include="source\input.cpp" />
   </ItemGroup>
 </Project>

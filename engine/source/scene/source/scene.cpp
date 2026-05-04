@@ -17,7 +17,6 @@ Scene::Scene(const std::string& name)
 
 Scene::~Scene()
 {
-
 }
 
 
@@ -28,6 +27,11 @@ void Scene::draw()
 
 void Scene::update(double dt)
 {
+	if (camera_)
+	{
+		camera_->update(dt);
+	}
+
 	for (auto& actor : actors_)
 	{
 		actor->update(dt);
@@ -44,6 +48,15 @@ Camera& Scene::getCamera()
 const Camera& Scene::getCamera() const
 {
 	return *camera_;
+}
+
+
+void Scene::setCamera(std::unique_ptr<Camera> camera)
+{
+	if (camera)
+	{
+		camera_ = std::move(camera);
+	}
 }
 
 

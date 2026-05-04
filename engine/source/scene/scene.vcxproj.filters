@@ -21,6 +21,7 @@
     <ClCompile Include="source\resourcemanager.cpp">
       <Filter>source</Filter>
     </ClCompile>
+    <ClCompile Include="source\fpscamera.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\engine\scene\actor.h">

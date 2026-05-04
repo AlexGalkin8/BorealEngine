@@ -2,9 +2,11 @@
 
 #include <engine/core/utility/assert.h>
 #include <engine/core/utility/utility.h>
+#include <engine/platform/input.h>
 
 #include <windows.h>
 #include <string>
+#include <vector>
 
 namespace platform {
 
@@ -169,6 +171,23 @@ static LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM l
 {
 	switch (uMsg)
 	{
+	case WM_INPUT:
+	{
+		UINT size = 0;
+		if (GetRawInputData(reinterpret_cast<HRAWINPUT>(lParam), RID_INPUT, nullptr, &size, sizeof(RAWINPUTHEADER)) == 0 && size > 0)
+		{
+			std::vector<BYTE> buf(size);
+			if (GetRawInputData(reinterpret_cast<HRAWINPUT>(lParam), RID_INPUT, buf.data(), &size, sizeof(RAWINPUTHEADER)) == size)
+			{
+				const RAWINPUT* raw = reinterpret_cast<const RAWINPUT*>(buf.data());
+				if (raw->header.dwType == RIM_TYPEMOUSE && (raw->data.mouse.usFlags & MOUSE_MOVE_ABSOLUTE) == 0)
+				{
+					notifyRawMouseInput(raw->data.mouse.lLastX, raw->data.mouse.lLastY);
+				}
+			}
+		}
+		return DefWindowProc(hWnd, uMsg, wParam, lParam);
+	}
 	case WM_CREATE:
 		break;
 	case WM_DESTROY:

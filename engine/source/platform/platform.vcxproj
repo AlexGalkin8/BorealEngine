@@ -87,6 +87,7 @@
     <ClInclude Include="..\..\include\engine\platform\window.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="source\input.cpp" />
     <ClCompile Include="source\window.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

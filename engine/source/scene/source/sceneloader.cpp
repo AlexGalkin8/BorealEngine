@@ -3,6 +3,7 @@
 #include "engine/scene/common.h"
 #include "engine/scene/scene.h"
 #include "engine/scene/camera.h"
+#include "engine/scene/fpscamera.h"
 
 #include "actor.hpp"
 
@@ -438,7 +439,8 @@ static std::unique_ptr<Scene> loadSceneFromJsonText(
 	std::string_view json_text,
 	const std::string& scene_file_path,
 	const std::string& data_root_path,
-	ResourceManager& resource_manager)
+	ResourceManager& resource_manager,
+	platform::IInput* input)
 {
 	std::string scene_name = extractStringValue(json_text, "name");
 	if (scene_name.empty())
@@ -457,6 +459,7 @@ static std::unique_ptr<Scene> loadSceneFromJsonText(
 	float camera_far = 100.0f;
 
 	const std::string camera_object_text = extractObjectValue(json_text, "camera");
+	std::string camera_type_str;
 	if (!camera_object_text.empty())
 	{
 		extractVector3Value(camera_object_text, "eye", camera_eye);
@@ -466,10 +469,30 @@ static std::unique_ptr<Scene> loadSceneFromJsonText(
 		extractNumberValue(camera_object_text, "aspect", camera_aspect);
 		extractNumberValue(camera_object_text, "near", camera_near);
 		extractNumberValue(camera_object_text, "far", camera_far);
+		camera_type_str = extractStringValue(camera_object_text, "type");
 	}
 
-	scene->getCamera().setLookAt(camera_eye, camera_target, camera_up);
-	scene->getCamera().setPerspective(math::radians(camera_fov_degrees), camera_aspect, camera_near, camera_far);
+	// Determine camera type
+	ECameraType camera_type = ECameraType::kBase;
+	if (camera_type_str == "fps")
+	{
+		camera_type = ECameraType::kFps;
+	}
+
+	// Create camera of appropriate type
+	std::unique_ptr<Camera> camera;
+	if (camera_type == ECameraType::kFps && input != nullptr)
+	{
+		camera = std::make_unique<FpsCamera>(*input);
+	}
+	else
+	{
+		camera = std::make_unique<Camera>();
+	}
+
+	camera->setLookAt(camera_eye, camera_target, camera_up);
+	camera->setPerspective(math::radians(camera_fov_degrees), camera_aspect, camera_near, camera_far);
+	scene->setCamera(std::move(camera));
 
 	const std::string scene_path = extractStringValue(json_text, "scene_path");
 	std::vector<SceneModelEntry> model_entries = extractModelEntries(json_text);
@@ -526,11 +549,11 @@ static std::unique_ptr<Scene> loadSceneFromJsonText(
 std::unique_ptr<Scene> SceneLoader::loadFromFile(const std::string& scene_name, const std::string& data_root_path)
 {
 	auto resource_manager = ResourceManager::create();
-	return loadFromFile(scene_name, *resource_manager, data_root_path);
+	return loadFromFile(scene_name, *resource_manager, data_root_path, nullptr);
 }
 
 
-std::unique_ptr<Scene> SceneLoader::loadFromFile(const std::string& scene_name, ResourceManager& resource_manager, const std::string& data_root_path)
+std::unique_ptr<Scene> SceneLoader::loadFromFile(const std::string& scene_name, ResourceManager& resource_manager, const std::string& data_root_path, platform::IInput* input)
 {
 	const std::string scene_file_path = resolveSceneFilePath(scene_name, data_root_path);
 	if (scene_file_path.empty())
@@ -544,7 +567,7 @@ std::unique_ptr<Scene> SceneLoader::loadFromFile(const std::string& scene_name, 
 		return nullptr;
 	}
 
-	return loadSceneFromJsonText(json_text, scene_file_path, data_root_path, resource_manager);
+	return loadSceneFromJsonText(json_text, scene_file_path, data_root_path, resource_manager, input);
 }
 
 

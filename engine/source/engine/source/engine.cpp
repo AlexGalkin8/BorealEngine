@@ -2,6 +2,7 @@
 
 #include <engine/core/utility/assert.h>
 #include <engine/platform/window.h>
+#include <engine/platform/input.h>
 #include <engine/scene/scene.h>
 #include <engine/scene/camera.h>
 #include <engine/scene/resourcemanager.h>
@@ -43,13 +44,18 @@ std::unique_ptr<Engine> Engine::create(const std::string& settings_file_name, st
 	engine->window_ = platform::IWindow::create(window_desc);
 	ASSERT_MSG_RETURN_NULL(engine->window_ != nullptr, "Failed to create window");
 
+	engine->input_ = platform::IInput::create(engine->settings_->data_root_path,
+	                                           engine->settings_->input_config_name,
+	                                           engine->window_->getHandle());
+	ASSERT_MSG_RETURN_NULL(engine->input_ != nullptr, "Failed to create input");
+
 	engine->swap_chain_ = engine->render_device_->createSwapChain(*engine->window_);
 	ASSERT_MSG_RETURN_NULL(engine->swap_chain_ != nullptr, "Failed to create swap chain");
 
 	// Create default scene
 	{
 		std::unique_ptr<scene::Scene> default_scene = scene::SceneLoader::loadFromFile(
-			engine->settings_->default_scene_name, *engine->resource_manager_, engine->settings_->data_root_path);
+			engine->settings_->default_scene_name, *engine->resource_manager_, engine->settings_->data_root_path, engine->input_.get());
 		ASSERT_MSG_RETURN_NULL(default_scene != nullptr, "Failed to create default scene");
 
 		const float aspect = static_cast<float>(engine->settings_->window_width) / static_cast<float>(engine->settings_->window_height);
@@ -177,6 +183,12 @@ bool Engine::isPaused() const
 void Engine::frame()
 {
 	double dt = time_.tick(0.0, 0.1);
+
+
+	if (input_)
+	{
+		input_->update();
+	}
 
 	if (time_.isPaused())
 	{
