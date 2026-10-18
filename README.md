@@ -16,7 +16,7 @@
 
 * \[ ] **Vulkan** support
 * \[ ] Support for additional platforms
-* \[ ] *Add your near-term goals here: materials, lighting, animation, etc.*
+* \[ ] Implementing render passes: depth, gbuffer, lighting, postprocessing, etc.
 
 ## Architecture
 
