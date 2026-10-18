@@ -52,7 +52,6 @@ The engine is split into independent libraries (modules):
 ```bash
 git clone https://github.com/<your-username>/BorealEngine.git
 cd BorealEngine
-# Build commands — replace with the actual ones
 ```
 
 And open BorealEngine\\engine\\BorealEngine.slnx using Visual Studio 2022 or later
@@ -84,5 +83,5 @@ BorealEngine/
 
 ## Contact
 
-Author: [@A](https://github.com/<your-username>)lexGalkin8
+Author: [@AlexGalkin8](https://github.com/AlexGalkin8)
 
