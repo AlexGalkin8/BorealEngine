@@ -76,10 +76,6 @@ BorealEngine/
 
 ```
 
-## License
-
-*Specify a license (e.g., MIT) and add a `LICENSE` file.*
-
 ## Contact
 
 Author: [@AlexGalkin8](https://github.com/AlexGalkin8)
