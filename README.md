@@ -50,7 +50,7 @@ The engine is split into independent libraries (modules):
 ### Steps
 
 ```bash
-git clone https://github.com/<your-username>/BorealEngine.git
+git clone https://github.com/AlexGalkin8/BorealEngine.git
 cd BorealEngine
 ```
 
