@@ -1,0 +1,22 @@
+{
+  "name": "default_scene",
+  "scene_path": "default_scene",
+  "models": [
+    {
+      "name": "pudge.glb",
+      "position": [0.0, 0.0, 0.0],
+      "scale": [1.0, 1.0, 1.0],
+      "rotation_euler_degrees": [0.0, 0.0, 0.0]
+    }
+  ],
+  "camera": {
+    "type": "fps",
+    "eye": [0.0, 0.7, -2.0],
+    "target": [0.0, 0.7, 0.0],
+    "up": [0.0, 1.0, 0.0],
+    "fov_degrees": 90.0,
+    "aspect": 1.7777778,
+    "near": 0.1,
+    "far": 500.0
+  }
+}

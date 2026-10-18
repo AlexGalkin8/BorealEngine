@@ -3,14 +3,11 @@
 
 #include <cmath>
 
-#ifndef _CRT_SECURE_NO_WARNINGS
-#define _CRT_SECURE_NO_WARNINGS
-#endif
-
 #pragma warning(push)
 #pragma warning(disable: 4996)
 #define TINYGLTF3_IMPLEMENTATION
 #define TINYGLTF3_ENABLE_FS
+#define TINYGLTF3_ENABLE_STB_IMAGE
 #include "..\..\..\third_party\tinygltf\source\tiny_gltf_v3.h"
 #pragma warning(pop)
 
@@ -147,13 +144,10 @@ static LoadedMeshData loadPrimitiveFromModel(const tinygltf3::Model& model, cons
             dst_vertex.texcoord[1] = 0.0f;
         }
 
-        if (!sampleBaseColorTexture(model, primitive, dst_vertex.texcoord[0], dst_vertex.texcoord[1], dst_vertex.color))
-        {
-            dst_vertex.color[0] = 1.0f;
-            dst_vertex.color[1] = 1.0f;
-            dst_vertex.color[2] = 1.0f;
-            dst_vertex.color[3] = 1.0f;
-        }
+        dst_vertex.color[0] = 1.0f;
+        dst_vertex.color[1] = 1.0f;
+        dst_vertex.color[2] = 1.0f;
+        dst_vertex.color[3] = 1.0f;
     }
 
     if (primitive.indices >= 0)
@@ -249,6 +243,13 @@ static void fillTexturesAndMaterials(const tinygltf3::Model& model, LoadedModelD
 			texture_data.width = image.width;
 			texture_data.height = image.height;
 			texture_data.component_count = image.component;
+
+			if (image.image.data != nullptr && image.width > 0 && image.height > 0 && image.component > 0)
+			{
+				const size_t pixel_data_size = static_cast<size_t>(image.width) * static_cast<size_t>(image.height) * static_cast<size_t>(image.component);
+				texture_data.pixel_data.resize(pixel_data_size);
+				memcpy(texture_data.pixel_data.data(), image.image.data, pixel_data_size);
+			}
 		}
 
 		loaded_model.textures.push_back(std::move(texture_data));

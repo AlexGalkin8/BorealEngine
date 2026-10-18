@@ -30,28 +30,16 @@
     <ClInclude Include="..\..\include\engine\render\interface\common.h">
       <Filter>include\interface</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\engine\render\interface\renderinterface.h">
-      <Filter>include\interface</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\include\engine\render\interface\texture.h">
       <Filter>include\interface</Filter>
     </ClInclude>
     <ClInclude Include="source\deferredrenderer.hpp">
       <Filter>source</Filter>
     </ClInclude>
-    <ClInclude Include="source\resourcemanager.hpp">
-      <Filter>source</Filter>
-    </ClInclude>
     <ClInclude Include="source\interface\d3d12\d3d12buffer.hpp">
       <Filter>source\interface\d3d12</Filter>
     </ClInclude>
     <ClInclude Include="source\interface\d3d12\d3d12common.hpp">
-      <Filter>source\interface\d3d12</Filter>
-    </ClInclude>
-    <ClInclude Include="source\interface\d3d12\d3d12renderinterface.hpp">
-      <Filter>source\interface\d3d12</Filter>
-    </ClInclude>
-    <ClInclude Include="source\interface\d3d12\d3d12resourcemanager.hpp">
       <Filter>source\interface\d3d12</Filter>
     </ClInclude>
     <ClInclude Include="source\interface\d3d12\d3d12swapchain.hpp">
@@ -99,9 +87,27 @@
     <ClInclude Include="source\interface\fence.hpp">
       <Filter>source\interface</Filter>
     </ClInclude>
-    <ClInclude Include="source\interface\devicecontext.hpp" />
-    <ClInclude Include="source\interface\d3d12\d3d12devicecontext.hpp" />
-    <ClInclude Include="source\interface\d3d12\d3d12renderdevice.hpp" />
+    <ClInclude Include="..\..\include\engine\render\interface\commandlist.h">
+      <Filter>include\interface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\include\engine\render\interface\renderdevice.h">
+      <Filter>include\interface</Filter>
+    </ClInclude>
+    <ClInclude Include="source\interface\d3d12\d3d12commandlist.hpp">
+      <Filter>source\interface\d3d12</Filter>
+    </ClInclude>
+    <ClInclude Include="source\interface\d3d12\d3d12descriptorheap.hpp">
+      <Filter>source\interface\d3d12</Filter>
+    </ClInclude>
+    <ClInclude Include="source\interface\d3d12\d3d12renderdevice.hpp">
+      <Filter>source\interface\d3d12</Filter>
+    </ClInclude>
+    <ClInclude Include="source\interface\d3d12\d3d12commandlistpool.hpp">
+      <Filter>source\interface\d3d12</Filter>
+    </ClInclude>
+    <ClInclude Include="source\interface\d3d12\d3d12commandqueue.hpp">
+      <Filter>source\interface\d3d12</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\deferredrenderer.cpp">
@@ -110,13 +116,7 @@
     <ClCompile Include="source\renderer.cpp">
       <Filter>source</Filter>
     </ClCompile>
-    <ClCompile Include="source\resourcemanager.cpp">
-      <Filter>source</Filter>
-    </ClCompile>
     <ClCompile Include="source\interface\buffer.cpp">
-      <Filter>source\interface</Filter>
-    </ClCompile>
-    <ClCompile Include="source\interface\renderinterface.cpp">
       <Filter>source\interface</Filter>
     </ClCompile>
     <ClCompile Include="source\interface\swapchain.cpp">
@@ -126,12 +126,6 @@
       <Filter>source\interface</Filter>
     </ClCompile>
     <ClCompile Include="source\interface\d3d12\d3d12buffer.cpp">
-      <Filter>source\interface\d3d12</Filter>
-    </ClCompile>
-    <ClCompile Include="source\interface\d3d12\d3d12renderinterface.cpp">
-      <Filter>source\interface\d3d12</Filter>
-    </ClCompile>
-    <ClCompile Include="source\interface\d3d12\d3d12resourcemanager.cpp">
       <Filter>source\interface\d3d12</Filter>
     </ClCompile>
     <ClCompile Include="source\interface\d3d12\d3d12swapchain.cpp">
@@ -170,8 +164,26 @@
     <ClCompile Include="source\interface\fence.cpp">
       <Filter>source\interface</Filter>
     </ClCompile>
-    <ClCompile Include="source\interface\renderdevice.cpp" />
-    <ClCompile Include="source\interface\d3d12\d3d12renderdevice.cpp" />
-    <ClCompile Include="source\interface\d3d12\d3d12devicecontext.cpp" />
+    <ClCompile Include="source\interface\d3d12\d3d12commandlist.cpp">
+      <Filter>source\interface\d3d12</Filter>
+    </ClCompile>
+    <ClCompile Include="source\interface\d3d12\d3d12descriptorheap.cpp">
+      <Filter>source\interface\d3d12</Filter>
+    </ClCompile>
+    <ClCompile Include="source\interface\d3d12\d3d12renderdevice.cpp">
+      <Filter>source\interface\d3d12</Filter>
+    </ClCompile>
+    <ClCompile Include="source\interface\renderdevice.cpp">
+      <Filter>source\interface</Filter>
+    </ClCompile>
+    <ClCompile Include="source\interface\commandlist.cpp">
+      <Filter>source\interface</Filter>
+    </ClCompile>
+    <ClCompile Include="source\interface\d3d12\d3d12commandlistpool.cpp">
+      <Filter>source\interface\d3d12</Filter>
+    </ClCompile>
+    <ClCompile Include="source\interface\d3d12\d3d12commandqueue.cpp">
+      <Filter>source\interface\d3d12</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

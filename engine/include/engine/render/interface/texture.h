@@ -1,6 +1,8 @@
 #pragma once
 
-#include "interface/common.h"
+#include "common.h"
+
+#include <cstdint>
 
 
 namespace render {
@@ -21,12 +23,13 @@ public:
 	};
 
 public:
+	const Desc& getDesc() const { return desc_; }
+
 	virtual ~ITexture();
 
-	const Desc& getDesc() const { return desc_; }
+protected:
 	ITexture(const Desc& desc);
 
-protected:
 	const Desc desc_;
 };
 

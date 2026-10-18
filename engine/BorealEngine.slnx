@@ -36,6 +36,7 @@
   </Folder>
   <Folder Name="/shaders/">
     <File Path="shaders/base.hlsl" />
+    <File Path="shaders/static_samplers.hlsli" />
   </Folder>
   <Folder Name="/third_party/">
     <Project Path="third_party/tinygltf/tinygltf.vcxproj" Id="2287d897-b011-4b49-8983-167e357b76da" />

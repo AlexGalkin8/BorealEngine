@@ -5,8 +5,11 @@
 
 #include <cstdint>
 #include <string>
+#include <string_view>
 #include <atomic>
 #include <limits>
+#include <format>
+#include <utility>
 
 
 namespace render {
@@ -53,10 +56,43 @@ enum class EShaderType
 	kMesh
 };
 
+enum class EPrimitiveTopology
+{
+	kPoint = 0,
+	kLine,
+	kTriangle,
+	kPatch
+};
+
+
+enum class ECommandListType
+{
+	kDirect = 0,
+	kCompute,
+	kCopy
+};
+
+
+using FenceValue = uint64_t;
+
 inline constexpr uint32_t kMaxRenderTargets = 8;
 
 inline constexpr uint32_t kBackBufferCount = 3;
 inline constexpr ETextureFormat kBackBufferFormat = ETextureFormat::kRGBA8_Unorm;
+
+
+inline bool isDepthTextureFormat(ETextureFormat format)
+{
+	switch (format)
+	{
+		case ETextureFormat::D16_Unorm:
+		case ETextureFormat::D24_Unorm_S8_Uint:
+		case ETextureFormat::D32_Float:
+			return true;
+		default:
+			return false;
+	}
+}
 
 
 namespace internal {
@@ -103,6 +139,37 @@ protected:
 	virtual ~IResource() = default;
 };
 
+#ifdef _DEBUG
+
+template<typename TObject>
+inline void setRenderObjectDebugNameImpl(TObject& obj, std::string_view name)
+{
+	obj.setName(std::string(name));
+}
+
+
+template<typename TObject, typename... TArgs>
+inline void setRenderObjectDebugNameImpl(TObject& obj, std::format_string<TArgs...> fmt, TArgs&&... args)
+{
+	obj.setName(std::format(fmt, std::forward<TArgs>(args)...));
+}
+
+#endif // _DEBUG
+
 }  // namespace internal
+
+#ifdef _DEBUG
+
+#define SET_RENDER_OBJECT_DEBUG_NAME(obj, ...) \
+	do { ::render::internal::setRenderObjectDebugNameImpl((obj), __VA_ARGS__); } while (0)
+
+#else
+
+#define SET_RENDER_OBJECT_DEBUG_NAME(obj, ...) \
+	do { (void)(obj); } while (0)
+
+#endif // _DEBUG
+
+
 
 }  // namespace render

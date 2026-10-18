@@ -89,46 +89,48 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\engine\render\interface\buffer.h" />
+    <ClInclude Include="..\..\include\engine\render\interface\commandlist.h" />
     <ClInclude Include="..\..\include\engine\render\interface\common.h" />
-    <ClInclude Include="..\..\include\engine\render\interface\renderinterface.h" />
+    <ClInclude Include="..\..\include\engine\render\interface\renderdevice.h" />
     <ClInclude Include="..\..\include\engine\render\interface\swapchain.h" />
     <ClInclude Include="..\..\include\engine\render\interface\texture.h" />
     <ClInclude Include="..\..\include\engine\render\renderer.h" />
     <ClInclude Include="source\deferredrenderer.hpp" />
     <ClInclude Include="source\interface\d3d12\d3d12buffer.hpp" />
+    <ClInclude Include="source\interface\d3d12\d3d12commandlist.hpp" />
+    <ClInclude Include="source\interface\d3d12\d3d12commandlistpool.hpp" />
+    <ClInclude Include="source\interface\d3d12\d3d12commandqueue.hpp" />
     <ClInclude Include="source\interface\d3d12\d3d12common.hpp" />
-    <ClInclude Include="source\interface\d3d12\d3d12devicecontext.hpp" />
+    <ClInclude Include="source\interface\d3d12\d3d12descriptorheap.hpp" />
     <ClInclude Include="source\interface\d3d12\d3d12fence.hpp" />
     <ClInclude Include="source\interface\d3d12\d3d12pipelinestate.hpp" />
     <ClInclude Include="source\interface\d3d12\d3d12pipelinestatemanager.hpp" />
     <ClInclude Include="source\interface\d3d12\d3d12renderdevice.hpp" />
-    <ClInclude Include="source\interface\d3d12\d3d12renderinterface.hpp" />
-    <ClInclude Include="source\interface\d3d12\d3d12resourcemanager.hpp" />
     <ClInclude Include="source\interface\d3d12\d3d12shader.hpp" />
     <ClInclude Include="source\interface\d3d12\d3d12shadercompiler.hpp" />
     <ClInclude Include="source\interface\d3d12\d3d12swapchain.hpp" />
     <ClInclude Include="source\interface\d3d12\d3d12texture.hpp" />
-    <ClInclude Include="source\interface\devicecontext.hpp" />
     <ClInclude Include="source\interface\fence.hpp" />
     <ClInclude Include="source\interface\resourcelayoutstate.hpp" />
     <ClInclude Include="source\interface\pipelinestate.hpp" />
     <ClInclude Include="source\interface\pipelinestatedesc.hpp" />
     <ClInclude Include="source\interface\shader.hpp" />
     <ClInclude Include="source\pipelinestatemanager.hpp" />
-    <ClInclude Include="source\resourcemanager.hpp" />
     <ClInclude Include="source\shadercompiler.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\deferredrenderer.cpp" />
     <ClCompile Include="source\interface\buffer.cpp" />
+    <ClCompile Include="source\interface\commandlist.cpp" />
     <ClCompile Include="source\interface\d3d12\d3d12buffer.cpp" />
-    <ClCompile Include="source\interface\d3d12\d3d12devicecontext.cpp" />
+    <ClCompile Include="source\interface\d3d12\d3d12commandlist.cpp" />
+    <ClCompile Include="source\interface\d3d12\d3d12commandlistpool.cpp" />
+    <ClCompile Include="source\interface\d3d12\d3d12commandqueue.cpp" />
+    <ClCompile Include="source\interface\d3d12\d3d12descriptorheap.cpp" />
     <ClCompile Include="source\interface\d3d12\d3d12fence.cpp" />
     <ClCompile Include="source\interface\d3d12\d3d12pipelinestate.cpp" />
     <ClCompile Include="source\interface\d3d12\d3d12pipelinestatemanager.cpp" />
     <ClCompile Include="source\interface\d3d12\d3d12renderdevice.cpp" />
-    <ClCompile Include="source\interface\d3d12\d3d12renderinterface.cpp"><ExcludedFromBuild>true</ExcludedFromBuild></ClCompile>
-    <ClCompile Include="source\interface\d3d12\d3d12resourcemanager.cpp" />
     <ClCompile Include="source\interface\d3d12\d3d12shader.cpp" />
     <ClCompile Include="source\interface\d3d12\d3d12shadercompiler.cpp" />
     <ClCompile Include="source\interface\d3d12\d3d12swapchain.cpp" />
@@ -136,13 +138,11 @@
     <ClCompile Include="source\interface\fence.cpp" />
     <ClCompile Include="source\interface\pipelinestate.cpp" />
     <ClCompile Include="source\interface\renderdevice.cpp" />
-    <ClCompile Include="source\interface\renderinterface.cpp"><ExcludedFromBuild>true</ExcludedFromBuild></ClCompile>
     <ClCompile Include="source\interface\shader.cpp" />
     <ClCompile Include="source\interface\swapchain.cpp" />
     <ClCompile Include="source\interface\texture.cpp" />
     <ClCompile Include="source\pipelinestatemanager.cpp" />
     <ClCompile Include="source\renderer.cpp" />
-    <ClCompile Include="source\resourcemanager.cpp" />
     <ClCompile Include="source\shadercompiler.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

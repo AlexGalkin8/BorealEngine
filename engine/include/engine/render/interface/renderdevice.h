@@ -2,6 +2,9 @@
 
 #include "common.h"
 
+#include "texture.h"
+#include "buffer.h"
+
 #include <cstdint>
 #include <memory>
 
@@ -12,8 +15,7 @@ class IWindow;
 
 namespace render {
 class ISwapChain;
-class IDeviceContext;
-class IResourceManager;
+class ICommandList;
 class IPipelineStateManager;
 }  // namespace render
 
@@ -23,36 +25,43 @@ namespace render {
 class IRenderDevice : public utility::NonCopyable
 {
 public:
-    struct Info
-    {
-        bool is_ray_tracing_support = false;
-    };
+	struct Info
+	{
+		bool is_ray_tracing_support = false;
+	};
 
-    struct CreationDesc
-    {
-        bool enable_debug_validation_layer = true;
-    };
+	struct CreationDesc
+	{
+		bool enable_debug_validation_layer = true;
+	};
 
 public:
-    template<ERenderAPI render_api>
-    static std::unique_ptr<IRenderDevice> create(const CreationDesc& creation_desc);
+	template<ERenderAPI render_api>
+	static std::unique_ptr<IRenderDevice> create(const CreationDesc& creation_desc);
 
-    IResourceManager& getResourceManager();
-    IPipelineStateManager& getPipelineStateManager();
-    IDeviceContext& getImmediateContext();
+	IPipelineStateManager& getPipelineStateManager();
 
-    virtual std::unique_ptr<ISwapChain> createSwapChain(const platform::IWindow& window) = 0;
+	// Resource creation
+	virtual std::unique_ptr<ISwapChain> createSwapChain(const platform::IWindow& window) = 0;
+	virtual std::unique_ptr<ITexture> createTexture(const ITexture::Desc& desc) = 0;
+	virtual std::unique_ptr<IBuffer> createBuffer(const IBuffer::Desc& desc) = 0;
 
-    virtual ~IRenderDevice();
+	// Commamd list management
+	virtual ICommandList& acquireCommandList(ECommandListType type, const std::string& name) = 0;
+	virtual void submitCommandList(ICommandList& command_list) = 0;
+	virtual void executeCommandLists(ECommandListType type) = 0;
+
+	// GPU synchronization
+	virtual void waitGpuIdle() = 0;
+
+	virtual ~IRenderDevice();
 
 protected:
-    IRenderDevice();
+	IRenderDevice();
 
 protected:
-    Info render_info_;
-    std::unique_ptr<IResourceManager> resource_manager_;
-    std::unique_ptr<IPipelineStateManager> pipeline_state_manager_;
-    std::unique_ptr<IDeviceContext> immediate_context_;
+	Info render_info_;
+	std::unique_ptr<IPipelineStateManager> pipeline_state_manager_;
 };
 
 }  // namespace render

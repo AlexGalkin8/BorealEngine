@@ -18,15 +18,15 @@ class D3D12Fence : public IFence
 public:
     static std::unique_ptr<D3D12Fence> create(IRenderDevice& render_device);
 
-    uint64_t getCompletedValue() const override;
+    FenceValue getCompletedValue() const override;
 
-    uint64_t signalOnCpu() override;
-    uint64_t signalOnGpu(ID3D12CommandQueue* commandQueue);
+    FenceValue signalOnCpu() override;
+    FenceValue signalOnGpu(ID3D12CommandQueue* commandQueue);
 
-    void waitValueOnCpu(uint64_t value) override;
-    void waitValueOnGpu(uint64_t value, ID3D12CommandQueue* commandQueue) const;
+    void waitValueOnCpu(FenceValue value) override;
+    void waitValueOnGpu(FenceValue value, ID3D12CommandQueue* commandQueue) const;
 
-    ID3D12Fence* const getFence() const { return fence_; }
+    ID3D12Fence* const getD3D12Fence() const { return fence_; }
 
     ~D3D12Fence() override;
 

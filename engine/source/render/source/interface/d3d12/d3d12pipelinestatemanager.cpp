@@ -7,19 +7,19 @@ namespace render {
 
 std::unique_ptr<IPipelineState>D3D12PipelineStateManager::createPipelineStateInternal(const GraphicsPipelineDesc& desc)
 {
-	return D3D12GraphicsPipelineState::create(getRenderDevice().getDevice(), desc, compileGraphicsShaders(desc));
+	return D3D12GraphicsPipelineState::create(getRenderDevice().getD3D12Device(), desc, compileGraphicsShaders(desc));
 }
 
 
 std::unique_ptr<IPipelineState> D3D12PipelineStateManager::createPipelineStateInternal(const ComputePipelineDesc& desc)
 {
-	return D3D12ComputePipelineState::create(getRenderDevice().getDevice(), desc, compileComputeShaders(desc));
+	return D3D12ComputePipelineState::create(getRenderDevice().getD3D12Device(), desc, compileComputeShaders(desc));
 }
 
 
 std::unique_ptr<IPipelineState> D3D12PipelineStateManager::createPipelineStateInternal(const MeshPipelineDesc& desc)
 {
-	return D3D12MeshPipelineState::create(getRenderDevice().getDevice(), desc, compileMeshShaders(desc));
+	return D3D12MeshPipelineState::create(getRenderDevice().getD3D12Device(), desc, compileMeshShaders(desc));
 }
 
 

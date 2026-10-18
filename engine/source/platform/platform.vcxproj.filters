@@ -12,6 +12,9 @@
     <ClInclude Include="..\..\include\engine\platform\window.h">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\engine\platform\input.h">
+      <Filter>include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\window.cpp">

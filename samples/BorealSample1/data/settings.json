@@ -1,8 +1,15 @@
 {
-  "data_root_path": "data",
-  "default_scene_name": "default_scene",
-  "input_config_name": "input",
-  "window_name": "BorealEngine",
-  "window_width": 1280,
-  "window_height": 720
+  "engine": [
+    { "data_root_path"    : "data"          },
+    { "default_scene_name": "default_scene" },
+    { "input_config_name" : "input"         },
+    { "window_name"       : "BorealEngine"  },
+    { "window_width"      : 1280            },
+    { "window_height"     : 720             }
+  ],
+
+  "renderer": [
+    { "render_width"  : 1280 },
+    { "render_height" : 720  }
+  ]
 }

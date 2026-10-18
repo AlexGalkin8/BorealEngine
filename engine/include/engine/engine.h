@@ -62,7 +62,6 @@ private:
 	std::unique_ptr<render::ISwapChain> swap_chain_;
 	std::unique_ptr<render::IRenderer> renderer_;
 
-	std::unique_ptr<scene::ResourceManager> resource_manager_;
 	std::vector<std::unique_ptr<scene::Scene>> scenes_;
 	scene::Scene* current_scene_ = nullptr;
 

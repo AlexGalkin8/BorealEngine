@@ -1,0 +1,17 @@
+{
+  "move_speed": 5.0,
+  "sprint_multiplier": 3.0,
+  "mouse_sensitivity": 0.15,
+  "bindings": [
+    { "action": "move_forward",  "key": "W" },
+    { "action": "move_backward", "key": "S" },
+    { "action": "move_left",     "key": "A" },
+    { "action": "move_right",    "key": "D" },
+    { "action": "move_up",       "key": "E" },
+    { "action": "move_down",     "key": "Q" },
+    { "action": "sprint",        "key": "LeftShift" },
+    { "action": "jump",          "key": "Space" },
+    { "action": "fire",          "key": "MouseLeft" },
+    { "action": "rotate_camera", "key": "MouseRight" }
+  ]
+}

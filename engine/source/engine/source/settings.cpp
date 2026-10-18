@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <sstream>
+#include <string_view>
 
 namespace {
 
@@ -110,37 +111,59 @@ std::unique_ptr<engine::Settings> engine::loadSettingsFromFile(const std::string
 	const std::string data_root_path = extractStringValue(text, "data_root_path");
 	if (!data_root_path.empty())
 	{
-		settings->data_root_path = data_root_path;
+		settings->engine_settings.data_root_path = data_root_path;
 	}
 
 	const std::string default_scene_name = extractStringValue(text, "default_scene_name");
 	if (!default_scene_name.empty())
 	{
-		settings->default_scene_name = default_scene_name;
+		settings->engine_settings.default_scene_name = default_scene_name;
 	}
 
 	const std::string input_config_name = extractStringValue(text, "input_config_name");
 	if (!input_config_name.empty())
 	{
-		settings->input_config_name = input_config_name;
+		settings->engine_settings.input_config_name = input_config_name;
 	}
 
 	const std::string window_name_utf8 = extractStringValue(text, "window_name");
 	if (!window_name_utf8.empty())
 	{
-		settings->window_name = std::wstring(window_name_utf8.begin(), window_name_utf8.end());
+		settings->engine_settings.window_name = std::wstring(window_name_utf8.begin(), window_name_utf8.end());
 	}
 
 	uint32_t width = 0;
 	if (extractUIntValue(text, "window_width", width) && width > 0)
 	{
-		settings->window_width = width;
+		settings->engine_settings.window_width = width;
 	}
 
 	uint32_t height = 0;
 	if (extractUIntValue(text, "window_height", height) && height > 0)
 	{
-		settings->window_height = height;
+		settings->engine_settings.window_height = height;
+	}
+
+	uint32_t render_width = 0;
+	if (extractUIntValue(text, "render_width", render_width) && render_width > 0)
+	{
+		settings->render_settings.render_width = render_width;
+	}
+
+	uint32_t render_height = 0;
+	if (extractUIntValue(text, "render_height", render_height) && render_height > 0)
+	{
+		settings->render_settings.render_height = render_height;
+	}
+
+	if (settings->render_settings.render_width == 0)
+	{
+		settings->render_settings.render_width = settings->engine_settings.window_width;
+	}
+
+	if (settings->render_settings.render_height == 0)
+	{
+		settings->render_settings.render_height = settings->engine_settings.window_height;
 	}
 
 	return settings;

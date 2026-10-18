@@ -1,7 +1,6 @@
 #pragma once
 
 #include "interface/common.h"
-#include "interface/devicecontext.h"
 #include "resourcelayoutstate.hpp"
 #include "shader.hpp"
 

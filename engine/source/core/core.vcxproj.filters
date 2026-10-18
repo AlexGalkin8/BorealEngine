@@ -38,6 +38,9 @@
     <ClInclude Include="..\..\include\engine\core\asset\gltfloader.h">
       <Filter>include\asset</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\engine\core\utility\enum.h">
+      <Filter>include\utility</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\utility.cpp">
@@ -45,6 +48,9 @@
     </ClCompile>
     <ClCompile Include="source\gltfloader.cpp">
       <Filter>source\asset</Filter>
+    </ClCompile>
+    <ClCompile Include="source\enum.cpp">
+      <Filter>source\utility</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

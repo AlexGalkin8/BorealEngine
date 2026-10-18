@@ -1,6 +1,6 @@
 #include "d3d12pipelinestate.hpp"
 #include "d3d12common.hpp"
-#include "interface/devicecontext.h"
+#include "interface/renderdevice.h"
 #include "interface/shader.hpp"
 
 #include <array>
@@ -15,9 +15,9 @@ static constexpr D3D12_FILL_MODE translateFillModeToD3D12FillMode(EFillMode fill
 {
 	switch (fill_mode)
 	{
-		case EFillMode::kWireframe: return D3D12_FILL_MODE_WIREFRAME;
-		case EFillMode::kSolid:     return D3D12_FILL_MODE_SOLID;
-		default:                   return D3D12_FILL_MODE_SOLID;
+	case EFillMode::kWireframe: return D3D12_FILL_MODE_WIREFRAME;
+	case EFillMode::kSolid:     return D3D12_FILL_MODE_SOLID;
+	default:                   return D3D12_FILL_MODE_SOLID;
 	}
 }
 
@@ -26,10 +26,10 @@ static constexpr D3D12_CULL_MODE translateCullModeToD3D12CullMode(ECullMode cull
 {
 	switch (cull_mode)
 	{
-		case ECullMode::kNone: return D3D12_CULL_MODE_NONE;
-		case ECullMode::kFront:return D3D12_CULL_MODE_FRONT;
-		case ECullMode::kBack: return D3D12_CULL_MODE_BACK;
-		default:               return D3D12_CULL_MODE_NONE;
+	case ECullMode::kNone: return D3D12_CULL_MODE_NONE;
+	case ECullMode::kFront:return D3D12_CULL_MODE_FRONT;
+	case ECullMode::kBack: return D3D12_CULL_MODE_BACK;
+	default:               return D3D12_CULL_MODE_NONE;
 	}
 }
 
@@ -38,16 +38,16 @@ static constexpr D3D12_COMPARISON_FUNC translateDepthFuncToD3D12ComparisonFunc(E
 {
 	switch (depth_func)
 	{
-		case EDepthFunc::kNone:           return D3D12_COMPARISON_FUNC_NEVER;
-		case EDepthFunc::kNever:          return D3D12_COMPARISON_FUNC_NEVER;
-		case EDepthFunc::kLess:           return D3D12_COMPARISON_FUNC_LESS;
-		case EDepthFunc::kEqual:          return D3D12_COMPARISON_FUNC_EQUAL;
-		case EDepthFunc::kLessEqual:      return D3D12_COMPARISON_FUNC_LESS_EQUAL;
-		case EDepthFunc::kGreather:       return D3D12_COMPARISON_FUNC_GREATER;
-		case EDepthFunc::kNotEqual:       return D3D12_COMPARISON_FUNC_NOT_EQUAL;
-		case EDepthFunc::kGreatherEqual:  return D3D12_COMPARISON_FUNC_GREATER_EQUAL;
-		case EDepthFunc::kAlways:         return D3D12_COMPARISON_FUNC_ALWAYS;
-		default:                          return D3D12_COMPARISON_FUNC_LESS;
+	case EDepthFunc::kNone:           return D3D12_COMPARISON_FUNC_NEVER;
+	case EDepthFunc::kNever:          return D3D12_COMPARISON_FUNC_NEVER;
+	case EDepthFunc::kLess:           return D3D12_COMPARISON_FUNC_LESS;
+	case EDepthFunc::kEqual:          return D3D12_COMPARISON_FUNC_EQUAL;
+	case EDepthFunc::kLessEqual:      return D3D12_COMPARISON_FUNC_LESS_EQUAL;
+	case EDepthFunc::kGreather:       return D3D12_COMPARISON_FUNC_GREATER;
+	case EDepthFunc::kNotEqual:       return D3D12_COMPARISON_FUNC_NOT_EQUAL;
+	case EDepthFunc::kGreatherEqual:  return D3D12_COMPARISON_FUNC_GREATER_EQUAL;
+	case EDepthFunc::kAlways:         return D3D12_COMPARISON_FUNC_ALWAYS;
+	default:                          return D3D12_COMPARISON_FUNC_LESS;
 	}
 }
 
@@ -56,10 +56,10 @@ static constexpr D3D12_PRIMITIVE_TOPOLOGY_TYPE translatePrimitiveTopologyToD3D12
 {
 	switch (topology)
 	{
-		case EPrimitiveTopology::kPoint:    return D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
-		case EPrimitiveTopology::kLine:     return D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
-		case EPrimitiveTopology::kTriangle: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-		default:                            return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	case EPrimitiveTopology::kPoint:    return D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
+	case EPrimitiveTopology::kLine:     return D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
+	case EPrimitiveTopology::kTriangle: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	default:                            return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 	}
 }
 
@@ -78,13 +78,13 @@ static constexpr D3D12_INPUT_ELEMENT_DESC translateVertexAttributeToD3D12InputEl
 	// Set SemanticName based on semantic type
 	switch (attribute.semantic.type)
 	{
-		case ESemanticType::kPosition: desc.SemanticName = "POSITION";  break;
-		case ESemanticType::kNormal:   desc.SemanticName = "NORMAL";    break;
-		case ESemanticType::kTangent:  desc.SemanticName = "TANGENT";   break;
-		case ESemanticType::kBitangent:desc.SemanticName = "BITANGENT"; break;
-		case ESemanticType::kColor:    desc.SemanticName = "COLOR";     break;
-		case ESemanticType::kTexCoord: desc.SemanticName = "TEXCOORD";  break;
-		default:                       desc.SemanticName = "";          break;
+	case ESemanticType::kPosition: desc.SemanticName = "POSITION";  break;
+	case ESemanticType::kNormal:   desc.SemanticName = "NORMAL";    break;
+	case ESemanticType::kTangent:  desc.SemanticName = "TANGENT";   break;
+	case ESemanticType::kBitangent:desc.SemanticName = "BITANGENT"; break;
+	case ESemanticType::kColor:    desc.SemanticName = "COLOR";     break;
+	case ESemanticType::kTexCoord: desc.SemanticName = "TEXCOORD";  break;
+	default:                       desc.SemanticName = "";          break;
 	}
 	return desc;
 }
@@ -110,115 +110,115 @@ static constexpr D3D12_RENDER_TARGET_BLEND_DESC translateBlendModeToD3D12RenderT
 	D3D12_RENDER_TARGET_BLEND_DESC desc = {};
 	switch (blend_mode)
 	{
-		case EBlendMode::kDisabled:
-			desc.BlendEnable = FALSE;
-			desc.LogicOpEnable = FALSE;
-			desc.SrcBlend = D3D12_BLEND_ONE;
-			desc.DestBlend = D3D12_BLEND_ZERO;
-			desc.BlendOp = D3D12_BLEND_OP_ADD;
-			desc.SrcBlendAlpha = D3D12_BLEND_ONE;
-			desc.DestBlendAlpha = D3D12_BLEND_ZERO;
-			desc.BlendOpAlpha = D3D12_BLEND_OP_ADD;
-			desc.LogicOp = D3D12_LOGIC_OP_NOOP;
-			desc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
-			break;
-		case EBlendMode::kAlpha:
-			desc.BlendEnable = TRUE;
-			desc.LogicOpEnable = FALSE;
-			desc.SrcBlend = D3D12_BLEND_SRC_ALPHA;
-			desc.DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
-			desc.BlendOp = D3D12_BLEND_OP_ADD;
-			desc.SrcBlendAlpha = D3D12_BLEND_ONE;
-			desc.DestBlendAlpha = D3D12_BLEND_ZERO;
-			desc.BlendOpAlpha = D3D12_BLEND_OP_ADD;
-			desc.LogicOp = D3D12_LOGIC_OP_NOOP;
-			desc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
-			break;
-		case EBlendMode::kPremultiplied:
-			desc.BlendEnable = TRUE;
-			desc.LogicOpEnable = FALSE;
-			desc.SrcBlend = D3D12_BLEND_ONE;
-			desc.DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
-			desc.BlendOp = D3D12_BLEND_OP_ADD;
-			desc.SrcBlendAlpha = D3D12_BLEND_ONE;
-			desc.DestBlendAlpha = D3D12_BLEND_ZERO;
-			desc.BlendOpAlpha = D3D12_BLEND_OP_ADD;
-			desc.LogicOp = D3D12_LOGIC_OP_NOOP;
-			desc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
-			break;
-		case EBlendMode::kAdditive:
-			desc.BlendEnable = TRUE;
-			desc.LogicOpEnable = FALSE;
-			desc.SrcBlend = D3D12_BLEND_SRC_ALPHA;
-			desc.DestBlend = D3D12_BLEND_ONE;
-			desc.BlendOp = D3D12_BLEND_OP_ADD;
-			desc.SrcBlendAlpha = D3D12_BLEND_ONE;
-			desc.DestBlendAlpha = D3D12_BLEND_ZERO;
-			desc.BlendOpAlpha = D3D12_BLEND_OP_ADD;
-			desc.LogicOp = D3D12_LOGIC_OP_NOOP;
-			desc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
-			break;
-		case EBlendMode::kMultiply:
-			desc.BlendEnable = TRUE;
-			desc.LogicOpEnable = FALSE;
-			desc.SrcBlend = D3D12_BLEND_DEST_COLOR;
-			desc.DestBlend = D3D12_BLEND_ZERO;
-			desc.BlendOp = D3D12_BLEND_OP_ADD;
-			desc.SrcBlendAlpha = D3D12_BLEND_DEST_ALPHA;
-			desc.DestBlendAlpha = D3D12_BLEND_ZERO;
-			desc.BlendOpAlpha = D3D12_BLEND_OP_ADD;
-			desc.LogicOp = D3D12_LOGIC_OP_NOOP;
-			desc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
-			break;
-		case EBlendMode::kSubtract:
-			desc.BlendEnable = TRUE;
-			desc.LogicOpEnable = FALSE;
-			desc.SrcBlend = D3D12_BLEND_SRC_ALPHA;
-			desc.DestBlend = D3D12_BLEND_ONE;
-			desc.BlendOp = D3D12_BLEND_OP_REV_SUBTRACT;
-			desc.SrcBlendAlpha = D3D12_BLEND_ONE;
-			desc.DestBlendAlpha = D3D12_BLEND_ZERO;
-			desc.BlendOpAlpha = D3D12_BLEND_OP_ADD;
-			desc.LogicOp = D3D12_LOGIC_OP_NOOP;
-			desc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
-			break;
-		case EBlendMode::kMin:
-			desc.BlendEnable = TRUE;
-			desc.LogicOpEnable = FALSE;
-			desc.SrcBlend = D3D12_BLEND_ONE;
-			desc.DestBlend = D3D12_BLEND_ONE;
-			desc.BlendOp = D3D12_BLEND_OP_MIN;
-			desc.SrcBlendAlpha = D3D12_BLEND_ONE;
-			desc.DestBlendAlpha = D3D12_BLEND_ONE;
-			desc.BlendOpAlpha = D3D12_BLEND_OP_MIN;
-			desc.LogicOp = D3D12_LOGIC_OP_NOOP;
-			desc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
-			break;
-		case EBlendMode::kMax:
-			desc.BlendEnable = TRUE;
-			desc.LogicOpEnable = FALSE;
-			desc.SrcBlend = D3D12_BLEND_ONE;
-			desc.DestBlend = D3D12_BLEND_ONE;
-			desc.BlendOp = D3D12_BLEND_OP_MAX;
-			desc.SrcBlendAlpha = D3D12_BLEND_ONE;
-			desc.DestBlendAlpha = D3D12_BLEND_ONE;
-			desc.BlendOpAlpha = D3D12_BLEND_OP_MAX;
-			desc.LogicOp = D3D12_LOGIC_OP_NOOP;
-			desc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
-			break;
-		default:
-			// Default to disabled blending
-			desc.BlendEnable = FALSE;
-			desc.LogicOpEnable = FALSE;
-			desc.SrcBlend = D3D12_BLEND_ONE;
-			desc.DestBlend = D3D12_BLEND_ZERO;
-			desc.BlendOp = D3D12_BLEND_OP_ADD;
-			desc.SrcBlendAlpha = D3D12_BLEND_ONE;
-			desc.DestBlendAlpha = D3D12_BLEND_ZERO;
-			desc.BlendOpAlpha = D3D12_BLEND_OP_ADD;
-			desc.LogicOp = D3D12_LOGIC_OP_NOOP;
-			desc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
-			break;
+	case EBlendMode::kDisabled:
+		desc.BlendEnable = FALSE;
+		desc.LogicOpEnable = FALSE;
+		desc.SrcBlend = D3D12_BLEND_ONE;
+		desc.DestBlend = D3D12_BLEND_ZERO;
+		desc.BlendOp = D3D12_BLEND_OP_ADD;
+		desc.SrcBlendAlpha = D3D12_BLEND_ONE;
+		desc.DestBlendAlpha = D3D12_BLEND_ZERO;
+		desc.BlendOpAlpha = D3D12_BLEND_OP_ADD;
+		desc.LogicOp = D3D12_LOGIC_OP_NOOP;
+		desc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+		break;
+	case EBlendMode::kAlpha:
+		desc.BlendEnable = TRUE;
+		desc.LogicOpEnable = FALSE;
+		desc.SrcBlend = D3D12_BLEND_SRC_ALPHA;
+		desc.DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
+		desc.BlendOp = D3D12_BLEND_OP_ADD;
+		desc.SrcBlendAlpha = D3D12_BLEND_ONE;
+		desc.DestBlendAlpha = D3D12_BLEND_ZERO;
+		desc.BlendOpAlpha = D3D12_BLEND_OP_ADD;
+		desc.LogicOp = D3D12_LOGIC_OP_NOOP;
+		desc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+		break;
+	case EBlendMode::kPremultiplied:
+		desc.BlendEnable = TRUE;
+		desc.LogicOpEnable = FALSE;
+		desc.SrcBlend = D3D12_BLEND_ONE;
+		desc.DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
+		desc.BlendOp = D3D12_BLEND_OP_ADD;
+		desc.SrcBlendAlpha = D3D12_BLEND_ONE;
+		desc.DestBlendAlpha = D3D12_BLEND_ZERO;
+		desc.BlendOpAlpha = D3D12_BLEND_OP_ADD;
+		desc.LogicOp = D3D12_LOGIC_OP_NOOP;
+		desc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+		break;
+	case EBlendMode::kAdditive:
+		desc.BlendEnable = TRUE;
+		desc.LogicOpEnable = FALSE;
+		desc.SrcBlend = D3D12_BLEND_SRC_ALPHA;
+		desc.DestBlend = D3D12_BLEND_ONE;
+		desc.BlendOp = D3D12_BLEND_OP_ADD;
+		desc.SrcBlendAlpha = D3D12_BLEND_ONE;
+		desc.DestBlendAlpha = D3D12_BLEND_ZERO;
+		desc.BlendOpAlpha = D3D12_BLEND_OP_ADD;
+		desc.LogicOp = D3D12_LOGIC_OP_NOOP;
+		desc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+		break;
+	case EBlendMode::kMultiply:
+		desc.BlendEnable = TRUE;
+		desc.LogicOpEnable = FALSE;
+		desc.SrcBlend = D3D12_BLEND_DEST_COLOR;
+		desc.DestBlend = D3D12_BLEND_ZERO;
+		desc.BlendOp = D3D12_BLEND_OP_ADD;
+		desc.SrcBlendAlpha = D3D12_BLEND_DEST_ALPHA;
+		desc.DestBlendAlpha = D3D12_BLEND_ZERO;
+		desc.BlendOpAlpha = D3D12_BLEND_OP_ADD;
+		desc.LogicOp = D3D12_LOGIC_OP_NOOP;
+		desc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+		break;
+	case EBlendMode::kSubtract:
+		desc.BlendEnable = TRUE;
+		desc.LogicOpEnable = FALSE;
+		desc.SrcBlend = D3D12_BLEND_SRC_ALPHA;
+		desc.DestBlend = D3D12_BLEND_ONE;
+		desc.BlendOp = D3D12_BLEND_OP_REV_SUBTRACT;
+		desc.SrcBlendAlpha = D3D12_BLEND_ONE;
+		desc.DestBlendAlpha = D3D12_BLEND_ZERO;
+		desc.BlendOpAlpha = D3D12_BLEND_OP_ADD;
+		desc.LogicOp = D3D12_LOGIC_OP_NOOP;
+		desc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+		break;
+	case EBlendMode::kMin:
+		desc.BlendEnable = TRUE;
+		desc.LogicOpEnable = FALSE;
+		desc.SrcBlend = D3D12_BLEND_ONE;
+		desc.DestBlend = D3D12_BLEND_ONE;
+		desc.BlendOp = D3D12_BLEND_OP_MIN;
+		desc.SrcBlendAlpha = D3D12_BLEND_ONE;
+		desc.DestBlendAlpha = D3D12_BLEND_ONE;
+		desc.BlendOpAlpha = D3D12_BLEND_OP_MIN;
+		desc.LogicOp = D3D12_LOGIC_OP_NOOP;
+		desc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+		break;
+	case EBlendMode::kMax:
+		desc.BlendEnable = TRUE;
+		desc.LogicOpEnable = FALSE;
+		desc.SrcBlend = D3D12_BLEND_ONE;
+		desc.DestBlend = D3D12_BLEND_ONE;
+		desc.BlendOp = D3D12_BLEND_OP_MAX;
+		desc.SrcBlendAlpha = D3D12_BLEND_ONE;
+		desc.DestBlendAlpha = D3D12_BLEND_ONE;
+		desc.BlendOpAlpha = D3D12_BLEND_OP_MAX;
+		desc.LogicOp = D3D12_LOGIC_OP_NOOP;
+		desc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+		break;
+	default:
+		// Default to disabled blending
+		desc.BlendEnable = FALSE;
+		desc.LogicOpEnable = FALSE;
+		desc.SrcBlend = D3D12_BLEND_ONE;
+		desc.DestBlend = D3D12_BLEND_ZERO;
+		desc.BlendOp = D3D12_BLEND_OP_ADD;
+		desc.SrcBlendAlpha = D3D12_BLEND_ONE;
+		desc.DestBlendAlpha = D3D12_BLEND_ZERO;
+		desc.BlendOpAlpha = D3D12_BLEND_OP_ADD;
+		desc.LogicOp = D3D12_LOGIC_OP_NOOP;
+		desc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+		break;
 	}
 	return desc;
 }
@@ -282,10 +282,10 @@ static constexpr D3D12_DESCRIPTOR_RANGE translateDescriptorRangeToD3D12Descripto
 	D3D12_DESCRIPTOR_RANGE d3d12_range = {};
 	switch (range.descriptors_type)
 	{
-		case DescriptorType::kCBV: d3d12_range.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV; break;
-		case DescriptorType::kSRV: d3d12_range.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV; break;
-		case DescriptorType::kUAV: d3d12_range.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV; break;
-		default:                   d3d12_range.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV; break;
+	case DescriptorType::kCBV: d3d12_range.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV; break;
+	case DescriptorType::kSRV: d3d12_range.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV; break;
+	case DescriptorType::kUAV: d3d12_range.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV; break;
+	default:                   d3d12_range.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV; break;
 	}
 	d3d12_range.NumDescriptors = range.num_descriptors;
 	d3d12_range.BaseShaderRegister = range.base_shader_register;
@@ -319,10 +319,10 @@ static D3D12_ROOT_PARAMETER translateRootParameterToD3D12RootParameter(
 	{
 		switch (descriptor->type)
 		{
-			case DescriptorType::kCBV: d3d12_param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV; break;
-			case DescriptorType::kSRV: d3d12_param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_SRV; break;
-			case DescriptorType::kUAV: d3d12_param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_UAV; break;
-			default:                  d3d12_param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV; break;
+		case DescriptorType::kCBV: d3d12_param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV; break;
+		case DescriptorType::kSRV: d3d12_param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_SRV; break;
+		case DescriptorType::kUAV: d3d12_param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_UAV; break;
+		default:                  d3d12_param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV; break;
 		}
 		d3d12_param.Descriptor.ShaderRegister = descriptor->shader_register;
 		d3d12_param.Descriptor.RegisterSpace = descriptor->register_space;
@@ -333,6 +333,80 @@ static D3D12_ROOT_PARAMETER translateRootParameterToD3D12RootParameter(
 
 using DescriptorRangesStorage = std::array<std::array<D3D12_DESCRIPTOR_RANGE, kMaxDescriptorRangesPerTable>, kMaxRootParameters>;
 using RootParametersStorage = std::array<D3D12_ROOT_PARAMETER, kMaxRootParameters>;
+
+enum class EStaticSamplerSlot : uint32_t
+{
+	kPointWrap = 0,
+	kPointClamp,
+	kLinearWrap,
+	kLinearClamp,
+	kAnisotropicWrap,
+	kAnisotropicClamp,
+	kShadow,
+	kCount
+};
+
+static constexpr uint32_t kStaticSamplerCount = static_cast<uint32_t>(EStaticSamplerSlot::kCount);
+
+static const std::array<D3D12_STATIC_SAMPLER_DESC, kStaticSamplerCount> kStaticSamplers = []
+{
+	std::array<D3D12_STATIC_SAMPLER_DESC, kStaticSamplerCount> samplers = {};
+
+	auto slotIndex = [](EStaticSamplerSlot slot)
+	{
+		return static_cast<size_t>(slot);
+	};
+
+	auto makeSampler = [](
+		UINT shader_register,
+		D3D12_FILTER filter,
+		D3D12_TEXTURE_ADDRESS_MODE address_mode,
+		UINT max_anisotropy,
+		D3D12_COMPARISON_FUNC comparison_func)
+	{
+		D3D12_STATIC_SAMPLER_DESC sampler = {};
+		sampler.Filter = filter;
+		sampler.AddressU = address_mode;
+		sampler.AddressV = address_mode;
+		sampler.AddressW = address_mode;
+		sampler.MipLODBias = 0.0f;
+		sampler.MaxAnisotropy = max_anisotropy;
+		sampler.ComparisonFunc = comparison_func;
+		sampler.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
+		sampler.MinLOD = 0.0f;
+		sampler.MaxLOD = D3D12_FLOAT32_MAX;
+		sampler.ShaderRegister = shader_register;
+		sampler.RegisterSpace = 0;
+		sampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+		return sampler;
+	};
+
+	samplers[slotIndex(EStaticSamplerSlot::kPointWrap)] =
+		makeSampler(0, D3D12_FILTER_MIN_MAG_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_WRAP, 1, D3D12_COMPARISON_FUNC_ALWAYS);
+
+	samplers[slotIndex(EStaticSamplerSlot::kPointClamp)] =
+		makeSampler(1, D3D12_FILTER_MIN_MAG_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, 1, D3D12_COMPARISON_FUNC_ALWAYS);
+
+	samplers[slotIndex(EStaticSamplerSlot::kLinearWrap)] =
+		makeSampler(2, D3D12_FILTER_MIN_MAG_MIP_LINEAR, D3D12_TEXTURE_ADDRESS_MODE_WRAP, 1, D3D12_COMPARISON_FUNC_ALWAYS);
+
+	samplers[slotIndex(EStaticSamplerSlot::kLinearClamp)] =
+		makeSampler(3, D3D12_FILTER_MIN_MAG_MIP_LINEAR, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, 1, D3D12_COMPARISON_FUNC_ALWAYS);
+
+	samplers[slotIndex(EStaticSamplerSlot::kAnisotropicWrap)] =
+		makeSampler(4, D3D12_FILTER_ANISOTROPIC, D3D12_TEXTURE_ADDRESS_MODE_WRAP, 16, D3D12_COMPARISON_FUNC_ALWAYS);
+
+	samplers[slotIndex(EStaticSamplerSlot::kAnisotropicClamp)] =
+		makeSampler(5, D3D12_FILTER_ANISOTROPIC, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, 16, D3D12_COMPARISON_FUNC_ALWAYS);
+
+	samplers[slotIndex(EStaticSamplerSlot::kShadow)] =
+		makeSampler(6, D3D12_FILTER_COMPARISON_MIN_MAG_LINEAR_MIP_POINT, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, 1, D3D12_COMPARISON_FUNC_LESS_EQUAL);
+
+	return samplers;
+}();
+
+static_assert(kStaticSamplerCount == 7, "Update HLSL static_samplers.hlsli registers when changing static sampler count");
+static_assert(kStaticSamplers.size() == kStaticSamplerCount, "Static sampler array size mismatch");
 
 static D3D12_ROOT_SIGNATURE_DESC translateResourceLayoutStateToD3D12RootSignatureDesc(
 	RootParametersStorage& d3d12_root_parameters,
@@ -349,12 +423,39 @@ static D3D12_ROOT_SIGNATURE_DESC translateResourceLayoutStateToD3D12RootSignatur
 	D3D12_ROOT_SIGNATURE_DESC root_signature_desc = {};
 	root_signature_desc.NumParameters = num_params;
 	root_signature_desc.pParameters = d3d12_root_parameters.data();
-	root_signature_desc.NumStaticSamplers = 0;
-	root_signature_desc.pStaticSamplers = nullptr;
+	root_signature_desc.NumStaticSamplers = static_cast<UINT>(kStaticSamplers.size());
+	root_signature_desc.pStaticSamplers = kStaticSamplers.data();
 	root_signature_desc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 	return root_signature_desc;
 }
 
+
+namespace internal {
+
+D3D12PipelineState::D3D12PipelineState(ID3D12PipelineState* pipeline_state, ID3D12RootSignature* root_signature)
+	: pipeline_state_(pipeline_state)
+	, root_signature_(root_signature)
+{
+}
+
+
+D3D12PipelineState::~D3D12PipelineState()
+{
+	D3D12_SAFE_RELEASE(root_signature_);
+	D3D12_SAFE_RELEASE(pipeline_state_);
+}
+
+
+void D3D12PipelineState::setGpuDebugNameImpl(const std::string& name)
+{
+	SET_D3D12_RESOURCE_DEBUG_NAME(pipeline_state_, name);
+	SET_D3D12_RESOURCE_DEBUG_NAME(root_signature_, ("RootSignature_" + name).c_str());
+}
+
+}  // namespace internal
+
+
+#pragma region GraphicsPipelineState
 
 std::unique_ptr<D3D12GraphicsPipelineState> D3D12GraphicsPipelineState::create(
 	ID3D12Device9* device, const GraphicsPipelineDesc& desc, const GraphicsCompiledShaders& shaders)
@@ -370,7 +471,7 @@ std::unique_ptr<D3D12GraphicsPipelineState> D3D12GraphicsPipelineState::create(
 	}
 	if (shaders.hull_shader || shaders.domain_shader)
 	{
-		ASSERT_MSG_RETURN_NULL(shaders.hull_shader && shaders.domain_shader, 
+		ASSERT_MSG_RETURN_NULL(shaders.hull_shader && shaders.domain_shader,
 			"Hull shader and domain shader must both be provided for tessellation");
 
 		d3d12_desc.HS = { shaders.hull_shader->getBytecodeData(), shaders.hull_shader->getBytecodeSize() };
@@ -419,19 +520,15 @@ std::unique_ptr<D3D12GraphicsPipelineState> D3D12GraphicsPipelineState::create(
 
 D3D12GraphicsPipelineState::D3D12GraphicsPipelineState(
 	const GraphicsPipelineDesc& desc, ID3D12PipelineState* pipeline_state, ID3D12RootSignature* root_signature)
-	: IGraphicsPipelineState(desc)
-	, pipeline_state_(pipeline_state)
-	, root_signature_(root_signature)
+	: internal::D3D12PipelineState(pipeline_state, root_signature)
+	, IGraphicsPipelineState(desc)
 {
 }
 
+#pragma endregion GraphicsPipelineState
 
-void D3D12GraphicsPipelineState::setGpuDebugName()
-{
-	SET_D3D12_RESOURCE_DEBUG_NAME(pipeline_state_, getName());
-	SET_D3D12_RESOURCE_DEBUG_NAME(root_signature_, ("RootSignature_" + getName()).c_str());
-}
 
+#pragma region ComputePipelineState
 
 std::unique_ptr<D3D12ComputePipelineState> D3D12ComputePipelineState::create(
 	ID3D12Device9* device, const ComputePipelineDesc& desc, const ComputeCompiledShaders& shaders)
@@ -442,19 +539,15 @@ std::unique_ptr<D3D12ComputePipelineState> D3D12ComputePipelineState::create(
 
 D3D12ComputePipelineState::D3D12ComputePipelineState(
 	const ComputePipelineDesc& desc, ID3D12PipelineState* pipeline_state, ID3D12RootSignature* root_signature)
-	: IComputePipelineState(desc)
-	, pipeline_state_(pipeline_state)
-	, root_signature_(root_signature)
+	: internal::D3D12PipelineState(pipeline_state, root_signature)
+	, IComputePipelineState(desc)
 {
 }
 
+#pragma endregion ComputePipelineState
 
-void D3D12ComputePipelineState::setGpuDebugName()
-{
-	SET_D3D12_RESOURCE_DEBUG_NAME(pipeline_state_, getName());
-	SET_D3D12_RESOURCE_DEBUG_NAME(root_signature_, ("RootSignature_" + getName()).c_str());
-}
 
+#pragma region MeshPipelineState
 
 std::unique_ptr<D3D12MeshPipelineState> D3D12MeshPipelineState::create(ID3D12Device9* device, const MeshPipelineDesc& desc, const MeshCompiledShaders& shaders)
 {
@@ -464,17 +557,11 @@ std::unique_ptr<D3D12MeshPipelineState> D3D12MeshPipelineState::create(ID3D12Dev
 
 D3D12MeshPipelineState::D3D12MeshPipelineState(
 	const MeshPipelineDesc& desc, ID3D12PipelineState* pipeline_state, ID3D12RootSignature* root_signature)
-	: IMeshPipelineState(desc)
-	, pipeline_state_(pipeline_state)
-	, root_signature_(root_signature)
+	: internal::D3D12PipelineState(pipeline_state, root_signature)
+	, IMeshPipelineState(desc)
 {
 }
 
-
-void D3D12MeshPipelineState::setGpuDebugName()
-{
-	SET_D3D12_RESOURCE_DEBUG_NAME(pipeline_state_, getName());
-	SET_D3D12_RESOURCE_DEBUG_NAME(root_signature_, ("RootSignature_" + getName()).c_str());
-}
+#pragma endregion MeshPipelineState
 
 }  // namespace render

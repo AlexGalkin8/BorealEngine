@@ -9,7 +9,7 @@ std::unique_ptr<D3D12Fence> D3D12Fence::create(IRenderDevice& render_device)
 	D3D12RenderDevice& d3d12_render_interface = static_cast<D3D12RenderDevice&>(render_device);
 
 	Microsoft::WRL::ComPtr<ID3D12Fence> fence;
-	D3D12_ASSERT_RETURN_NULL(d3d12_render_interface.getDevice()->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence)));
+	D3D12_ASSERT_RETURN_NULL(d3d12_render_interface.getD3D12Device()->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence)));
 	fence->Signal(0);
 
 	HANDLE event_handle = CreateEventW(nullptr, FALSE, FALSE, nullptr);
@@ -22,27 +22,27 @@ std::unique_ptr<D3D12Fence> D3D12Fence::create(IRenderDevice& render_device)
 }
 
 
-uint64_t D3D12Fence::getCompletedValue() const
+FenceValue D3D12Fence::getCompletedValue() const
 {
 	return fence_->GetCompletedValue();
 }
 
 
-uint64_t D3D12Fence::signalOnCpu()
+FenceValue D3D12Fence::signalOnCpu()
 {
 	D3D12_ASSERT_RETURN(fence_->Signal(next_signal_value_), kInvalidFenceValue);
 	return next_signal_value_++;
 }
 
 
-uint64_t D3D12Fence::signalOnGpu(ID3D12CommandQueue* command_queue)
+FenceValue D3D12Fence::signalOnGpu(ID3D12CommandQueue* command_queue)
 {
 	D3D12_ASSERT_RETURN(command_queue->Signal(fence_, next_signal_value_), kInvalidFenceValue);
 	return next_signal_value_++;
 }
 
 
-void D3D12Fence::waitValueOnCpu(uint64_t value)
+void D3D12Fence::waitValueOnCpu(FenceValue value)
 {
 	ASSERT_MSG_RETURN_VOID(value < next_signal_value_, "Wait value has already passed. value=%ull, next_signal_value_=%ull", value, next_signal_value_);
 	if (fence_->GetCompletedValue() < value)

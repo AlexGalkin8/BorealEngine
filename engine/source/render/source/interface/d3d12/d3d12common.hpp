@@ -16,10 +16,35 @@
 
 namespace render {
 
-inline constexpr uint32_t kD3D12RTVDescriptorCount = 1000;
+inline constexpr uint32_t kD3D12RTVDescriptorCount = 1024;
+inline constexpr uint32_t kD3D12SRVDescriptorCount = 1024;
+inline constexpr uint32_t kCommandListReservedDescriptorCount = 64;
 
 
 #define D3D12_SAFE_RELEASE(obj) if (obj) { (obj)->Release(); (obj) = nullptr; }
+
+
+inline constexpr D3D12_COMMAND_LIST_TYPE translateCommandListType(ECommandListType type)
+{
+	switch (type)
+	{
+		case ECommandListType::kDirect:  return D3D12_COMMAND_LIST_TYPE_DIRECT;
+		case ECommandListType::kCompute: return D3D12_COMMAND_LIST_TYPE_COMPUTE;
+		case ECommandListType::kCopy:    return D3D12_COMMAND_LIST_TYPE_COPY;
+		default:                         return D3D12_COMMAND_LIST_TYPE_DIRECT;
+	}
+}
+
+inline constexpr const char* translateCommandListTypeToString(ECommandListType type)
+{
+	switch (type)
+	{
+		case ECommandListType::kDirect:  return "Direct";
+		case ECommandListType::kCompute: return "Compute";
+		case ECommandListType::kCopy:    return "Copy";
+		default:                         return "Direct";
+	}
+}
 
 
 namespace internal {
@@ -159,6 +184,22 @@ inline void checkD3D12CallImpl(HRESULT expr_ret_value, const char* expr, const c
 }
 
 template<class DxObject>
+inline void setD3D12ResourceDebugNameImpl(DxObject* resource, const char* fmt, ...)
+{
+	if (resource && fmt)
+	{
+		char buf[256];
+		va_list ap;
+		va_start(ap, fmt);
+		vsnprintf_s(buf, sizeof(buf), _TRUNCATE, fmt, ap);
+		va_end(ap);
+
+		std::wstring toWCharStr(buf, buf + strlen(buf));
+		resource->SetName(toWCharStr.c_str());
+	}
+}
+
+template<class DxObject>
 inline void setD3D12ResourceDebugNameImpl(DxObject* resource, std::string_view name)
 {
 	if (!name.empty() && resource)
@@ -167,6 +208,7 @@ inline void setD3D12ResourceDebugNameImpl(DxObject* resource, std::string_view n
 		resource->SetName(toWCharStr.c_str());
 	}
 }
+
 }
 
 #define D3D12_ASSERT(expr) \
@@ -183,7 +225,7 @@ inline void setD3D12ResourceDebugNameImpl(DxObject* resource, std::string_view n
 
 #define PRINT_LOG(fmt, ...) printLogImpl((fmt), ##__VA_ARGS__)
 
-#define SET_D3D12_RESOURCE_DEBUG_NAME(obj, name) setD3D12ResourceDebugNameImpl((obj), (name));
+#define SET_D3D12_RESOURCE_DEBUG_NAME(obj, fmt, ...) setD3D12ResourceDebugNameImpl((obj), (fmt), ##__VA_ARGS__);
 
 #else
 
