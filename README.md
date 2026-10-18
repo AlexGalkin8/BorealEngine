@@ -2,7 +2,6 @@
 
 **BorealEngine** is a game engine built from scratch. It is currently at an early stage of development: the core libraries, a DirectX 12 renderer, and glTF model loading are in place.
 
-> ⚠️ \*\*Status: under active development.\*\* The API is unstable and may change without notice.
 <p align="center"><img src="docs/images/rabbit.png" width="800" alt="BorealEngine screenshot"></p>
 
 ## Features
