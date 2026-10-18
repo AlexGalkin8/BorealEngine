@@ -5,8 +5,6 @@
 > ⚠️ \*\*Status: under active development.\*\* The API is unstable and may change without notice.
 <p align="center"><img src="docs/images/rabbit.png" width="800" alt="BorealEngine screenshot"></p>
 
-\---
-
 ## Features
 
 * Rendering of 3D models in **glTF** format
@@ -19,8 +17,6 @@
 * \[ ] **Vulkan** support
 * \[ ] Support for additional platforms
 * \[ ] *Add your near-term goals here: materials, lighting, animation, etc.*
-
-\---
 
 ## Architecture
 
@@ -35,8 +31,6 @@ The engine is split into independent libraries (modules):
 |**render**|Rendering subsystem (currently DirectX 12)|
 |**scene**|Scene, objects, and camera|
 
-\---
-
 ## Supported Platforms and Graphics APIs
 
 |Platform|Graphics API|Status|
@@ -44,8 +38,6 @@ The engine is split into independent libraries (modules):
 |Windows|DirectX 12|✅ Supported|
 |Windows|Vulkan|🕓 Planned|
 |Linux|Vulkan|🕓 Planned|
-
-\---
 
 ## Building
 
@@ -65,8 +57,6 @@ cd BorealEngine
 
 And open BorealEngine\\engine\\BorealEngine.slnx using Visual Studio 2022 or later
 
-\---
-
 ## Camera Controls
 
 |Action|Keys / Mouse|
@@ -74,9 +64,6 @@ And open BorealEngine\\engine\\BorealEngine.slnx using Visual Studio 2022 or lat
 |*Move*|*e.g., W A S D*|
 |*Rotate*|*e.g., right mouse button + drag*|
 
-
-
-\---
 
 ## Repository Structure
 
@@ -90,8 +77,6 @@ BorealEngine/
 ├── scene/
 
 ```
-
-\---
 
 ## License
 
