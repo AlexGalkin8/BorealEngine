@@ -13,10 +13,9 @@
 * Platform: **Windows**
 
 ## Roadmap
-
+* \[ ] Implementing render passes: depth, gbuffer, lighting, postprocessing, etc.
 * \[ ] **Vulkan** support
 * \[ ] Support for additional platforms
-* \[ ] Implementing render passes: depth, gbuffer, lighting, postprocessing, etc.
 
 ## Architecture
 
