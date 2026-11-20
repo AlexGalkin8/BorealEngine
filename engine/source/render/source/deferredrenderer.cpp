@@ -1,4 +1,5 @@
 #include "deferredrenderer.hpp"
+#include "interface/gpuresourcemanager.h"
 #include "pipelinestatemanager.hpp"
 
 #include <engine/scene/scene.h>
@@ -29,9 +30,9 @@ static IBuffer* createDebugTriangleVertexBuffer(IRenderDevice& render_device)
 
 	IBuffer::Desc triangle_vertex_desc{};
 	triangle_vertex_desc.size = sizeof(kTriangleVertices);
-	std::unique_ptr<IBuffer> triangle_vertex_buffer = render_device.createBuffer(triangle_vertex_desc);
+	IBuffer* triangle_vertex_buffer = render_device.getResourceManager().createBuffer(triangle_vertex_desc);
 	triangle_vertex_buffer->upload(kTriangleVertices, triangle_vertex_desc.size);
-	return triangle_vertex_buffer.release();
+	return triangle_vertex_buffer;
 }
 
 
@@ -96,7 +97,7 @@ static ITexture* createTextureFromLoadedTextureData(
 	texture_desc.mipCount = 1;
 	texture_desc.format = ETextureFormat::kRGBA8_Unorm;
 
-	std::unique_ptr<ITexture> texture = render_device.createTexture(texture_desc);
+	ITexture* texture = render_device.getResourceManager().createTexture(texture_desc);
 
 	const uint32_t pixel_count = width * height;
 	std::vector<uint8_t> rgba_pixels(static_cast<size_t>(pixel_count) * 4ull, 255);
@@ -111,7 +112,7 @@ static ITexture* createTextureFromLoadedTextureData(
 	}
 
 	texture->uploadPixels(rgba_pixels.data(), static_cast<uint32_t>(rgba_pixels.size()));
-	return texture.release();
+	return texture;
 }
 
 
@@ -191,7 +192,7 @@ const DeferredRenderer::RenderMesh* DeferredRenderer::getOrCreateRenderMesh(cons
 		for (const asset::LoadedTextureData& loaded_texture : loaded_model.textures)
 		{
 			ITexture* texture = createTextureFromLoadedTextureData(render_device_, loaded_texture);
-			loaded_textures.push_back(texture != nullptr ? texture : default_white_texture_);
+			loaded_textures.push_back(texture);
 		}
 		file_textures_cache_.emplace(mesh.resource_path, std::move(loaded_textures));
 	}
@@ -230,22 +231,21 @@ const DeferredRenderer::RenderMesh* DeferredRenderer::getOrCreateRenderMesh(cons
 				}
 			}
 		}
-
 	}
 
 	IBuffer::Desc vertex_desc{};
 	vertex_desc.size = sizeof(asset::LoadedMeshData::Vertex) * loaded_mesh.vertices.size();
-	std::unique_ptr<IBuffer> vertex_buffer = render_device_.createBuffer(vertex_desc);
+	IBuffer* vertex_buffer = render_device_.getResourceManager().createBuffer(vertex_desc);
 	vertex_buffer->upload(loaded_mesh.vertices.data(), vertex_desc.size);
-	gpu_data.vertex_buffer = vertex_buffer.release();
+	gpu_data.vertex_buffer = vertex_buffer;
 
 	IBuffer::Desc index_desc{};
 	index_desc.size = sizeof(uint32_t) * loaded_mesh.indices.size();
-	std::unique_ptr<IBuffer> index_buffer = render_device_.createBuffer(index_desc);
+	IBuffer* index_buffer = render_device_.getResourceManager().createBuffer(index_desc);
 	index_buffer->upload(loaded_mesh.indices.data(), index_desc.size);
-	gpu_data.index_buffer = index_buffer.release();
+	gpu_data.index_buffer = index_buffer;
 
-	auto [inserted_it, inserted] = render_meshes_.emplace(mesh_cache_key, gpu_data);
+	auto [inserted_it, inserted] = render_meshes_.emplace(mesh_cache_key, std::move(gpu_data));
 	ASSERT(inserted);
 	return &inserted_it->second;
 }
@@ -312,8 +312,8 @@ void DeferredRenderer::initTextures()
 	depth_desc.depth = 1;
 	depth_desc.mipCount = 1;
 	depth_desc.format = ETextureFormat::D32_Float;
-	std::unique_ptr<ITexture> depth_texture = render_device_.createTexture(depth_desc);
-	depth_texture_ = depth_texture.release();
+	ITexture* depth_texture = render_device_.getResourceManager().createTexture(depth_desc);
+	depth_texture_ = depth_texture;
 
 	ITexture::Desc white_desc = {};
 	white_desc.width = 1;
@@ -321,8 +321,8 @@ void DeferredRenderer::initTextures()
 	white_desc.depth = 1;
 	white_desc.mipCount = 1;
 	white_desc.format = ETextureFormat::kRGBA8_Unorm;
-	std::unique_ptr<ITexture> default_white_texture = render_device_.createTexture(white_desc);
-	default_white_texture_ = default_white_texture.release();
+	ITexture* default_white_texture = render_device_.getResourceManager().createTexture(white_desc);
+	default_white_texture_ = default_white_texture;
 
 	static constexpr uint8_t kWhitePixel[4] = { 255, 255, 255, 255 };
 	default_white_texture_->uploadPixels(kWhitePixel, sizeof(kWhitePixel));

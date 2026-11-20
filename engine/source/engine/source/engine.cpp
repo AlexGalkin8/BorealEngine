@@ -117,7 +117,10 @@ void Engine::run()
 
 Engine::~Engine()
 {
-	render_device_->waitGpuIdle();
+	if (render_device_)
+	{
+		render_device_->waitGpuIdle();
+	}
 }
 
 

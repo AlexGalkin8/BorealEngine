@@ -17,6 +17,7 @@ namespace render {
 class ISwapChain;
 class ICommandList;
 class IPipelineStateManager;
+class GpuResourceManager;
 }  // namespace render
 
 
@@ -24,6 +25,7 @@ namespace render {
 
 class IRenderDevice : public utility::NonCopyable
 {
+	friend class GpuResourceManager;
 public:
 	struct Info
 	{
@@ -40,11 +42,10 @@ public:
 	static std::unique_ptr<IRenderDevice> create(const CreationDesc& creation_desc);
 
 	IPipelineStateManager& getPipelineStateManager();
+	GpuResourceManager& getResourceManager();
 
 	// Resource creation
 	virtual std::unique_ptr<ISwapChain> createSwapChain(const platform::IWindow& window) = 0;
-	virtual std::unique_ptr<ITexture> createTexture(const ITexture::Desc& desc) = 0;
-	virtual std::unique_ptr<IBuffer> createBuffer(const IBuffer::Desc& desc) = 0;
 
 	// Commamd list management
 	virtual ICommandList& acquireCommandList(ECommandListType type, const std::string& name) = 0;
@@ -59,8 +60,13 @@ public:
 protected:
 	IRenderDevice();
 
+	// Low-level factories transfer ownership only to the resource manager.
+	virtual std::unique_ptr<ITexture> createTexture(const ITexture::Desc& desc) = 0;
+	virtual std::unique_ptr<IBuffer> createBuffer(const IBuffer::Desc& desc) = 0;
+
 protected:
 	Info render_info_;
+	std::unique_ptr<GpuResourceManager> resource_manager_;
 	std::unique_ptr<IPipelineStateManager> pipeline_state_manager_;
 };
 

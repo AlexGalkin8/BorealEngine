@@ -21,6 +21,9 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\include\engine\render\interface\gpuresourcemanager.h">
+      <Filter>include\interface</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\include\engine\render\renderer.h">
       <Filter>include</Filter>
     </ClInclude>
@@ -184,6 +187,9 @@
     </ClCompile>
     <ClCompile Include="source\interface\d3d12\d3d12commandqueue.cpp">
       <Filter>source\interface\d3d12</Filter>
+    </ClCompile>
+    <ClCompile Include="source\interface\gpuresourcemanager.cpp">
+      <Filter>source\interface</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

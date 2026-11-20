@@ -4,7 +4,8 @@
 |---|---|
 | [001 — baseline rendering](001-render-baseline.md) | Proposed; implementation not started |
 | [002 — restore builds](002-build-fixes.md) | Complete; Debug/Release builds verified, runtime unverified |
-| [003 — base-color textures](003-base-color-textures.md) | Implemented; visual verification pending |
+| [003 — base-color textures](003-base-color-textures.md) | User confirmed correct display; shutdown warning tracked in 004 |
+| [004 — renderer resource lifetime](004-render-resource-lifetime.md) | Manager ownership implemented; sample shutdown validation pending |
 
 Document substantial tasks that benefit from continuity across chats, not every
 minor edit. File name: `NNN-short-topic.md`. Keep the table current.

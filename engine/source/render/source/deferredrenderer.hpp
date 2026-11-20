@@ -5,6 +5,7 @@
 #include <engine/core/asset/gltfloader.h>
 #include <engine/math/matrix.h>
 #include <engine/render/interface/texture.h>
+#include <engine/render/interface/buffer.h>
 
 #include <string>
 #include <unordered_map>

@@ -1,6 +1,6 @@
 # 003 — Decode model base-color textures
 
-Date: 2026-11-20. Status: implemented; visual verification pending.
+Date: 2026-11-20. Status: user confirmed correct model and base-color display.
 Authorization: user requested displaying the model's base color.
 
 ## Cause and changes
@@ -25,6 +25,8 @@ pixel data. Every primitive referenced a material with a base-color texture.
 The local probe is under engine/build/checks/texturecheck.cpp; it is a temporary,
 ignored verification artifact. Debug and Release x64 solution builds passed.
 
-GPU sampling, final image and D3D12 validation are not yet visually verified.
+The user subsequently confirmed correct model and base-color display. Shutdown
+validation reported LIVE_RESOURCE warnings, tracked in task 004. A clean D3D12
+validation run has not yet been confirmed.
 Node transforms/skinning, general glTF support, color-space processing and
 baseColorFactor handling remain separate limitations of the renderer.

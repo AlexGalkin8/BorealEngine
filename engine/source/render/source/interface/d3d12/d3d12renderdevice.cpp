@@ -7,6 +7,8 @@
 #include "d3d12commandlist.hpp"
 #include "d3d12texture.hpp"
 #include "d3d12buffer.hpp"
+#include "pipelinestatemanager.hpp"
+#include "interface/gpuresourcemanager.h"
 
 #include <engine/platform/window.h>
 
@@ -299,9 +301,9 @@ void D3D12RenderDevice::executeCommandLists(ECommandListType type)
 
 void D3D12RenderDevice::waitGpuIdle()
 {
-	direct_queue_->waitGpuIdle();
-	compute_queue_->waitGpuIdle();
-	copy_queue_->waitGpuIdle();
+	if (direct_queue_) direct_queue_->waitGpuIdle();
+	if (compute_queue_) compute_queue_->waitGpuIdle();
+	if (copy_queue_) copy_queue_->waitGpuIdle();
 }
 
 
@@ -316,15 +318,13 @@ D3D12RenderDevice::D3D12RenderDevice()
 
 D3D12RenderDevice::~D3D12RenderDevice()
 {
-#if defined(_DEBUG)
-	ID3D12DebugDevice* debug_layer = nullptr;
-	if (SUCCEEDED(device_->QueryInterface(&debug_layer)))
-	{
-		debug_layer->ReportLiveDeviceObjects(D3D12_RLDO_DETAIL | D3D12_RLDO_IGNORE_INTERNAL);
-		debug_layer->Release();
-	}
-#endif
-
+	// Destroy queue pools and cached PSOs before reporting live device objects.
+	waitGpuIdle();
+	pipeline_state_manager_.reset();
+	resource_manager_.reset();
+	direct_queue_.reset();
+	compute_queue_.reset();
+	copy_queue_.reset();
 	cbv_srv_uav_descriptor_heap_.reset();
 	cbv_srv_uav_cpu_descriptor_heap_.reset();
 	dsv_descriptor_heap_.reset();
@@ -333,6 +333,17 @@ D3D12RenderDevice::~D3D12RenderDevice()
 	D3D12_SAFE_RELEASE(device_);
 	D3D12_SAFE_RELEASE(adapter_);
 	D3D12_SAFE_RELEASE(dxgi_factory_);
+
+#if defined(_DEBUG)
+	// A device-scoped report would keep the device alive through its debug interface.
+	// Report through DXGI after releasing all application-owned graphics objects.
+	Microsoft::WRL::ComPtr<IDXGIDebug1> debug_layer;
+	if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&debug_layer))))
+	{
+		debug_layer->ReportLiveObjects(DXGI_DEBUG_ALL,
+			static_cast<DXGI_DEBUG_RLO_FLAGS>(DXGI_DEBUG_RLO_DETAIL | DXGI_DEBUG_RLO_IGNORE_INTERNAL));
+	}
+#endif
 }
 
 }  // namespace render

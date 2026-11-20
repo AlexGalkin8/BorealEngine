@@ -4,6 +4,7 @@
 |---|---|
 | [001 — deferred pipeline](001-deferred-pipeline.md) | Accepted by the user on 2026-11-20 |
 | [002 — ImGui editor](002-imgui-editor.md) | Accepted by the user on 2026-11-20 |
+| [003 — resource ownership](003-resource-ownership.md) | Accepted by the user on 2026-11-20 |
 
 Accepted direction does not mean completed implementation. Details beyond a decision's
 scope remain open. Record significant choices with alternatives: pipeline, ownership,

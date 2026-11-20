@@ -25,8 +25,7 @@ class D3D12RenderDevice final : public IRenderDevice
 
 public:
 	std::unique_ptr<ISwapChain> createSwapChain(const platform::IWindow& window) override;
-	std::unique_ptr<ITexture> createTexture(const ITexture::Desc& desc) override;
-	std::unique_ptr<IBuffer> createBuffer(const IBuffer::Desc& desc) override;
+
 
 	// Command list management
 	ICommandList& acquireCommandList(ECommandListType type, const std::string& name) override;
@@ -53,6 +52,9 @@ public:
 
 private:
 	D3D12RenderDevice();
+
+	std::unique_ptr<ITexture> createTexture(const ITexture::Desc& desc) override;
+	std::unique_ptr<IBuffer> createBuffer(const IBuffer::Desc& desc) override;
 
 	static std::unique_ptr<D3D12RenderDevice> create(const CreationDesc& creation_desc);
 

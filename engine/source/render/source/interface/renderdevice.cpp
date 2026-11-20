@@ -1,4 +1,5 @@
 #include "interface/renderdevice.h"
+#include "interface/gpuresourcemanager.h"
 
 #include "interface/commandlist.h"
 #include "interface/common.h"
@@ -22,6 +23,8 @@ template<>
 std::unique_ptr<IRenderDevice> IRenderDevice::create<ERenderAPI::kD3D12>(const CreationDesc& creation_desc)
 {
     std::unique_ptr<IRenderDevice> render_device = D3D12RenderDevice::create(creation_desc);
+    if (!render_device) return nullptr;
+    render_device->resource_manager_.reset(new GpuResourceManager(*render_device));
     render_device->pipeline_state_manager_ = IPipelineStateManager::create<ERenderAPI::kD3D12>(*render_device);
     return render_device;
 }
@@ -38,6 +41,11 @@ IPipelineStateManager& IRenderDevice::getPipelineStateManager()
     return *pipeline_state_manager_;
 }
 
+
+GpuResourceManager& IRenderDevice::getResourceManager()
+{
+    return *resource_manager_;
+}
 
 IRenderDevice::~IRenderDevice()
 {
