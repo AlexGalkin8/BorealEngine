@@ -231,17 +231,6 @@ const DeferredRenderer::RenderMesh* DeferredRenderer::getOrCreateRenderMesh(cons
 			}
 		}
 
-		if (gpu_data.base_color_texture == default_white_texture_)
-		{
-			for (ITexture* texture : textures)
-			{
-				if (texture != nullptr && texture != default_white_texture_)
-				{
-					gpu_data.base_color_texture = texture;
-					break;
-				}
-			}
-		}
 	}
 
 	IBuffer::Desc vertex_desc{};

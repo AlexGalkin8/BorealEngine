@@ -2,6 +2,8 @@
 #include "engine/core/utility/assert.h"
 
 #include <cmath>
+#include <limits>
+#include <filesystem>
 
 #pragma warning(push)
 #pragma warning(disable: 4996)
@@ -9,6 +11,8 @@
 #define TINYGLTF3_ENABLE_FS
 #define TINYGLTF3_ENABLE_STB_IMAGE
 #include "..\..\..\third_party\tinygltf\source\tiny_gltf_v3.h"
+#define STB_IMAGE_IMPLEMENTATION
+#include "../../../third_party/tinygltf/source/stb_image.h"
 #pragma warning(pop)
 
 
@@ -225,7 +229,7 @@ LoadedMeshData loadStaticMeshPrimitiveFromGltf(const std::string& file_path, uin
 }
 
 
-static void fillTexturesAndMaterials(const tinygltf3::Model& model, LoadedModelData& loaded_model)
+static void fillTexturesAndMaterials(const tinygltf3::Model& model, LoadedModelData& loaded_model, const std::string& file_path)
 {
 	loaded_model.textures.reserve(model->textures_count);
 	for (uint32_t texture_index = 0; texture_index < model->textures_count; ++texture_index)
@@ -240,15 +244,39 @@ static void fillTexturesAndMaterials(const tinygltf3::Model& model, LoadedModelD
 		{
 			const tg3_image& image = model->images[texture.source];
 			texture_data.uri = image.uri.data ? image.uri.data : "";
-			texture_data.width = image.width;
-			texture_data.height = image.height;
-			texture_data.component_count = image.component;
-
-			if (image.image.data != nullptr && image.width > 0 && image.height > 0 && image.component > 0)
+			// The v3 parser exposes image metadata but does not decode image payloads.
+			int width = 0, height = 0, channels = 0;
+			stbi_uc* pixels = nullptr;
+			if (image.buffer_view >= 0 && static_cast<uint32_t>(image.buffer_view) < model->buffer_views_count)
 			{
-				const size_t pixel_data_size = static_cast<size_t>(image.width) * static_cast<size_t>(image.height) * static_cast<size_t>(image.component);
-				texture_data.pixel_data.resize(pixel_data_size);
-				memcpy(texture_data.pixel_data.data(), image.image.data, pixel_data_size);
+				const auto& view = model->buffer_views[image.buffer_view];
+				if (view.buffer >= 0 && static_cast<uint32_t>(view.buffer) < model->buffers_count)
+				{
+					const auto& buffer = model->buffers[view.buffer].data;
+					if (buffer.data && view.byte_offset <= buffer.count && view.byte_length <= buffer.count - view.byte_offset &&
+						view.byte_length <= static_cast<uint64_t>(std::numeric_limits<int>::max()))
+					{
+						pixels = stbi_load_from_memory(buffer.data + view.byte_offset, static_cast<int>(view.byte_length),
+							&width, &height, &channels, STBI_rgb_alpha);
+					}
+				}
+			}
+			else if (!texture_data.uri.empty() && texture_data.uri.find(":") == std::string::npos)
+			{
+				const auto image_path = std::filesystem::path(file_path).parent_path() / texture_data.uri;
+				pixels = stbi_load(image_path.string().c_str(), &width, &height, &channels, STBI_rgb_alpha);
+			}
+			if (pixels)
+			{
+				texture_data.width = width;
+				texture_data.height = height;
+				texture_data.component_count = 4;
+				texture_data.pixel_data.assign(pixels, pixels + static_cast<size_t>(width) * height * 4);
+				stbi_image_free(pixels);
+			}
+			else
+			{
+				ASSERT_MSG(false, "Failed to decode glTF texture %u from %s", texture_index, file_path.c_str());
 			}
 		}
 
@@ -278,7 +306,7 @@ LoadedModelData loadModelFromGltf(const std::string& file_path)
 	ASSERT_MSG_RETURN(parseModelFromFile(file_path, model), LoadedModelData{}, "Failed to parse glTF model");
 
 	LoadedModelData loaded_model{};
-	fillTexturesAndMaterials(model, loaded_model);
+	fillTexturesAndMaterials(model, loaded_model, file_path);
 	for (uint32_t mesh_index = 0; mesh_index < model->meshes_count; ++mesh_index)
 	{
 		const tg3_mesh& mesh = model->meshes[mesh_index];
