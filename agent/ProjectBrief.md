@@ -37,9 +37,10 @@ Define a reference scene and quality settings before validating performance.
 - There is no requirement to build everything from scratch. Select dependencies
   for concrete needs and explain their purpose; no general library list is approved.
 - Work proceeds as time permits, without fixed deadlines or weekly hours.
+- The agent prepares Git changes, but each commit requires explicit user approval.
 - Store project context in the repository. New directories use lowercase.
 - Comments, commit messages and documentation are in English; conversation is in Russian.
-  Durable instructions are in the root AGENTS.md.
+  Durable instructions are in agents/AGENTS.md.
 
 ## Technical starting point
 

@@ -56,11 +56,11 @@ code when required by the current task.
 ## Project materials
 
 Three dedicated chats handle development, independent review and devlog/X publishing.
-Follow [ChatWorkflow](agent/ChatWorkflow.md) for responsibilities and handoffs.
+Follow [ChatWorkflow](../agent/ChatWorkflow.md) for responsibilities and handoffs.
 
-Start with [agent/README.md](agent/README.md).
-- For planning and architecture, consult [ProjectBrief](agent/ProjectBrief.md)
-  and [Roadmap](agent/Roadmap.md).
+Start with [agent/README.md](../agent/README.md).
+- For planning and architecture, consult [ProjectBrief](../agent/ProjectBrief.md)
+  and [Roadmap](../agent/Roadmap.md).
 - Read only relevant tasks, decisions and reviews; do not load the entire archive.
 - Keep durable rules here, goals and open questions in ProjectBrief, milestones in
   Roadmap and architectural rationale in decisions.
@@ -72,10 +72,14 @@ Start with [agent/README.md](agent/README.md).
 
 ## Architecture and code
 
-- Read [CppStyle](agent/CppStyle.md) before C++ changes. Preserve local conventions
+- Read [CppStyle](../agent/CppStyle.md) before C++ changes. Preserve local conventions
   and module boundaries; do not reformat unrelated code.
 - Separate CPU asset import, GPU resource ownership and command recording.
   Avoid repeated asset reads inside drawing passes.
+- GPU resources are owned centrally by a GPU resource manager, not by renderers
+  or RenderMesh objects. Consumers use non-owning handles/references. See
+  [resource ownership](../agent/decisions/003-resource-ownership.md). unique_ptr
+  is appropriate inside the owner; do not transfer ownership to consumers to fix leaks.
 - Make ownership explicit. Resource, descriptor and upload memory reclamation or
   reuse must respect completion of GPU work.
 - Check matrix/coordinate conventions in `engine/include/engine/math/conventions.h`.
@@ -87,13 +91,18 @@ Start with [agent/README.md](agent/README.md).
 
 ## Git workflow
 
-- The agent handles most Git work: inspect status/diffs and prepare and create
-  focused local commits for completed tasks within the assigned scope.
+- The agent handles most Git preparation: inspect status/diffs and prepare focused
+  changes for completed tasks within the assigned scope.
+- Never create a commit without explicit user approval for that commit. Before
+  requesting approval, finish the changes and appropriate checks, then present
+  the proposed scope and English commit message. An explicit user request to
+  commit the current changes is approval for that scope; implementation requests,
+  successful checks and approval of a previous commit are not approval for a new one.
 - Keep commits small but coherent. Each should cover a meaningful task; neither
   split related changes arbitrarily nor combine independent tasks.
 - Review the staged diff and run appropriate checks before committing. Stage explicit
   paths; exclude others' changes, temporary artifacts and logs.
-- Local commit authorization does not imply automatic push, rewriting published
+- Approval of a local commit does not imply automatic push, rewriting published
   history or deleting user work. Perform those actions only when appropriately requested.
 
 ## Build and verification
