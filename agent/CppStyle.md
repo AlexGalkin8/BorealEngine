@@ -41,8 +41,9 @@ conventions and do not rewrite the project solely for consistency.
 - Small data/descriptor types are structs with public fields and default values;
   classes encapsulate state and expose methods.
 - Both `{}` and `= {}` initialization occur; follow surrounding code.
-- Use `auto` for iterators, factories and obvious types; keep explicit types when
-  they clarify data representation or API contracts.
+- Spell out short type names explicitly, including pointer and reference types.
+  Use `auto` only when spelling out the type would be excessively long or when
+  type deduction is necessary. Lambda objects may be declared with `auto`.
 - Prefer explicit C++ casts. Existing C-style casts are not a requirement for new code.
 - Ownership commonly uses `unique_ptr`; actors also use `shared_ptr`. Raw pointers
   and references may observe objects or serve APIs, but identify the owner.
