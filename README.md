@@ -1,103 +1,125 @@
 # ❄️ BorealEngine
 
-**BorealEngine** is a game engine built from scratch. It is currently at an early stage of development: the core libraries, a DirectX 12 renderer, and glTF model loading are in place.
+**BorealEngine** is a personal game engine project focused on real-time rendering. It is at an early stage of development, with a Windows/DirectX 12 backend, glTF model loading, JSON scene descriptions, and an FPS camera.
 
-> ⚠️ \*\*Status: under active development.\*\* The API is unstable and may change without notice.
-<p align="center"><img src="docs/images/rabbit.png" width="800" alt="BorealEngine screenshot"></p>
+<p align="center">
+  <img src="docs/images/rabbit.png" width="800" alt="Wireframe rendering of a rabbit model in BorealEngine">
+</p>
+<p align="center"><em>A saved BorealEngine screenshot showing a rabbit model in wireframe. The default sample scene may differ.</em></p>
 
-\---
+> **Status: under active development.** APIs and asset formats may change. The screenshot records an earlier result; it does not establish the runtime state of the current revision.
 
-## Features
+## Current scope
 
-* Rendering of 3D models in **glTF** format
-* Camera controls
-* **DirectX 12** renderer
-* Platform: **Windows**
+- Windows and DirectX 12.
+- Static model import through tinygltf.
+- JSON scene descriptions with model placement and camera settings.
+- FPS camera movement and mouse look.
 
-## Roadmap
+These describe the current source structure, not a claim that all glTF features or rendering scenarios are supported. Current baseline verification is tracked in [the rendering baseline task](agent/tasks/001-render-baseline.md).
 
-* \[ ] **Vulkan** support
-* \[ ] Support for additional platforms
-* \[ ] *Add your near-term goals here: materials, lighting, animation, etc.*
+## Direction
 
-\---
+The selected baseline is:
 
-## Architecture
+**Depth prepass → G-buffer → deferred lighting → postprocessing**
 
-The engine is split into independent libraries (modules):
+A minimal Dear ImGui editor is also planned for level creation and object placement. These are development goals, not completed features. The proposed stages and acceptance criteria are in [the roadmap](agent/Roadmap.md).
 
-|Module|Purpose|
-|-|-|
-|**core**|Fundamental types and utilities used by all other modules|
-|**math**|Math library (vectors, matrices, etc.)|
-|**geometry**|Geometric primitives and geometry handling|
-|**platform**|Platform abstraction: windowing, input, system calls|
-|**render**|Rendering subsystem (currently DirectX 12)|
-|**scene**|Scene, objects, and camera|
+Vulkan and additional platforms remain open directions; they are not committed milestones. See [the project brief](agent/ProjectBrief.md) for goals and open questions.
 
-\---
-
-## Supported Platforms and Graphics APIs
-
-|Platform|Graphics API|Status|
-|-|-|-|
-|Windows|DirectX 12|✅ Supported|
-|Windows|Vulkan|🕓 Planned|
-|Linux|Vulkan|🕓 Planned|
-
-\---
-
-## Building
+## Build
 
 ### Requirements
 
-* Windows 10/11
-* Visual Studio 2022 or later
-* Windows SDK with DirectX 12 support
+- Windows 10/11, x64, with a DirectX 12-capable GPU and driver.
+- Visual Studio 2026 with **Desktop development with C++** and the **MSVC v145** toolset.
+- Windows SDK with DirectX 12 headers and libraries, including `dxcapi.h`.
+- Git with submodule support.
 
-### Steps
+The current Visual Studio projects specify C++20 and provide Debug and Release configurations for x64.
 
-```bash
-git clone https://github.com/<your-username>/BorealEngine.git
+### Get the sources
+
+```powershell
+git clone --recurse-submodules https://github.com/AlexGalkin8/BorealEngine.git
 cd BorealEngine
-# Build commands — replace with the actual ones
 ```
 
-And open BorealEngine\\engine\\BorealEngine.slnx using Visual Studio 2022 or later
+For an existing checkout, initialize the tinygltf submodule:
 
-\---
-
-## Camera Controls
-
-|Action|Keys / Mouse|
-|-|-|
-|*Move*|*e.g., W A S D*|
-|*Rotate*|*e.g., right mouse button + drag*|
-
-
-
-\---
-
-## Repository Structure
-
+```powershell
+git submodule update --init --recursive
 ```
+
+### Build the solution
+
+Open `engine/BorealEngine.slnx` in Visual Studio and select **Debug | x64** or **Release | x64**.
+
+Alternatively, run these commands from **Developer PowerShell for Visual Studio 2026** at the repository root:
+
+```powershell
+msbuild engine/BorealEngine.slnx /m /p:Configuration=Debug /p:Platform=x64
+msbuild engine/BorealEngine.slnx /m /p:Configuration=Release /p:Platform=x64
+```
+
+Use the checked-in solution. `scripts/generate_sln.bat` invokes CMake, but the repository currently has no CMake configuration.
+
+## Run the sample
+
+1. Set **BorealSample1** as the startup project.
+2. Set its debugger **Working Directory** to `$(ProjectDir)` (the `samples/BorealSample1` directory).
+3. Make the x64 DXC runtime available to the executable: `dxcompiler.dll` and its matching `dxil.dll`, for example beside the executable. Shader compilation happens at runtime.
+4. Check the shader source path before launching. It is currently hardcoded to `C:/Projects/BorealEngine/engine/shaders` in [d3d12shadercompiler.cpp](engine/source/render/source/interface/d3d12/d3d12shadercompiler.cpp). A checkout elsewhere requires adjusting that constant and rebuilding.
+5. Launch the sample with the selected configuration.
+
+The executable is built under `samples/BorealSample1/build/bin/x64/<Configuration>/`. Launching it directly still requires `samples/BorealSample1` as the working directory.
+
+The sample reads `data/settings.json`, which selects the scene and input configuration. The default scene is `data/scenes/default_scene/default_scene.json`; its model names resolve under `data/scenes/default_scene/models/`. Keep referenced model files and their external resources available.
+
+### Camera controls
+
+| Action | Default input |
+|---|---|
+| Move forward / backward | W / S |
+| Move left / right | A / D |
+| Move up / down | E / Q |
+| Move faster | Hold Left Shift |
+| Look around | Hold right mouse button and move the mouse |
+
+Movement bindings, speed, sprint multiplier, and mouse sensitivity are configured in `samples/BorealSample1/data/input.json`. Mouse look is currently gated directly by the right mouse button in the Windows input implementation.
+
+## Architecture
+
+| Module | Purpose |
+|---|---|
+| core | Fundamental types, utilities, and CPU asset import |
+| math | Vectors, matrices, and transforms |
+| geometry | Geometry code |
+| platform | Windows windowing and input |
+| render | Rendering interfaces and DirectX 12 backend |
+| scene | Scene objects, model resources, and cameras |
+| engine | Engine setup and main loop |
+
+## Repository structure
+
+```text
 BorealEngine/
-├── core/
-├── math/
-├── geometry/
-├── platform/
-├── render/
-├── scene/
-
+├── agent/                      Project goals, decisions, tasks, and devlog
+├── docs/images/                Saved screenshots
+├── engine/
+│   ├── BorealEngine.slnx       Main Visual Studio solution
+│   ├── include/engine/         Public headers
+│   ├── source/                 Engine modules
+│   ├── shaders/                HLSL sources
+│   └── third_party/            Dependencies, including the tinygltf submodule
+├── samples/BorealSample1/
+│   ├── BorealSample1.vcxproj   Sample application project
+│   ├── source/                 Sample entry point
+│   └── data/                   Settings, input bindings, scenes, and models
+└── scripts/                    Helper scripts
 ```
-
-\---
-
-## License
-
-*Specify a license (e.g., MIT) and add a `LICENSE` file.*
 
 ## Contact
 
-Author: [@A](https://github.com/<your-username>)lexGalkin8
-
+Author: [Aleksandr Galkin](https://github.com/AlexGalkin8) · [X](https://x.com/alexandgalkin)
