@@ -55,6 +55,9 @@ code when required by the current task.
 
 ## Project materials
 
+Three dedicated chats handle development, independent review and devlog/X publishing.
+Follow [ChatWorkflow](agent/ChatWorkflow.md) for responsibilities and handoffs.
+
 Start with [agent/README.md](agent/README.md).
 - For planning and architecture, consult [ProjectBrief](agent/ProjectBrief.md)
   and [Roadmap](agent/Roadmap.md).

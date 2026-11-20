@@ -9,6 +9,7 @@ It does not contain automatically launched agents. Write all materials in Englis
 | [ProjectBrief.md](ProjectBrief.md) | Confirmed goals, constraints and open questions |
 | [Roadmap.md](Roadmap.md) | Proposed milestones and acceptance criteria |
 | [CppStyle.md](CppStyle.md) | C++ conventions and local exceptions |
+| [ChatWorkflow.md](ChatWorkflow.md) | Development, independent review and devlog roles |
 | [decisions](decisions/README.md) | Accepted architectural decisions and rationale |
 | [tasks](tasks/README.md) | Tasks, verification and continuation points |
 | [reviews](reviews/README.md) | Significant source reviews |
