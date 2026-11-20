@@ -1,6 +1,7 @@
 #include "d3d12texture.hpp"
 #include "d3d12common.hpp"
 #include "d3d12renderdevice.hpp"
+#include <cstring>
 
 #include <engine/core/utility/assert.h>
 
@@ -128,12 +129,14 @@ std::unique_ptr<D3D12Texture> D3D12Texture::create(D3D12RenderDevice& render_dev
 		ASSERT_MSG_RETURN_NULL(createSrvDescriptor(render_device, resource.Get(), resource_desc, srv_descriptor), "Failed to create SRV descriptor for texture");
 	}
 
-	return std::unique_ptr<D3D12Texture>(new D3D12Texture(
+	auto texture = std::unique_ptr<D3D12Texture>(new D3D12Texture(
 		desc,
 		resource.Detach(),
 		std::move(srv_descriptor),
 		std::move(rtv_descriptor),
 		std::move(dsv_descriptor)));
+	texture->render_device_ = &render_device;
+	return texture;
 }
 
 
@@ -191,6 +194,69 @@ D3D12Texture::~D3D12Texture()
 	D3D12_SAFE_RELEASE(resource_);
 }
 
+
+void D3D12Texture::uploadPixels(const void* data, uint32_t size)
+{
+	ASSERT_MSG_RETURN_VOID(render_device_ && !uploaded_ && data &&
+		desc_.format == ETextureFormat::kRGBA8_Unorm && desc_.depth == 1 && desc_.mipCount == 1,
+		"Upload requires a new single-mip RGBA8 texture");
+	const uint64_t row_size = static_cast<uint64_t>(desc_.width) * 4;
+	ASSERT_MSG_RETURN_VOID(row_size * desc_.height == size, "Invalid texture upload size");
+	auto* device = render_device_->getD3D12Device();
+	const auto texture_desc = resource_->GetDesc();
+	D3D12_PLACED_SUBRESOURCE_FOOTPRINT footprint = {};
+	UINT64 upload_size = 0;
+	device->GetCopyableFootprints(&texture_desc, 0, 1, 0, &footprint, nullptr, nullptr, &upload_size);
+	D3D12_HEAP_PROPERTIES heap = {};
+	heap.Type = D3D12_HEAP_TYPE_UPLOAD;
+	D3D12_RESOURCE_DESC buffer = {};
+	buffer.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+	buffer.Width = upload_size;
+	buffer.Height = 1;
+	buffer.DepthOrArraySize = 1;
+	buffer.MipLevels = 1;
+	buffer.SampleDesc.Count = 1;
+	buffer.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+	Microsoft::WRL::ComPtr<ID3D12Resource> upload;
+	D3D12_ASSERT_RETURN_VOID(device->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE,
+		&buffer, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&upload)));
+	void* mapped = nullptr;
+	D3D12_RANGE read_range{0, 0};
+	D3D12_ASSERT_RETURN_VOID(upload->Map(0, &read_range, &mapped));
+	for (uint32_t row = 0; row < desc_.height; ++row)
+	{
+		std::memcpy(static_cast<uint8_t*>(mapped) + footprint.Offset +
+			static_cast<size_t>(row) * footprint.Footprint.RowPitch,
+			static_cast<const uint8_t*>(data) + row * row_size, static_cast<size_t>(row_size));
+	}
+	upload->Unmap(0, nullptr);
+	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> allocator;
+	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commands;
+	D3D12_ASSERT_RETURN_VOID(device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&allocator)));
+	D3D12_ASSERT_RETURN_VOID(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT,
+		allocator.Get(), nullptr, IID_PPV_ARGS(&commands)));
+	D3D12_TEXTURE_COPY_LOCATION source = {};
+	source.pResource = upload.Get();
+	source.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+	source.PlacedFootprint = footprint;
+	D3D12_TEXTURE_COPY_LOCATION destination = {};
+	destination.pResource = resource_;
+	destination.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+	commands->CopyTextureRegion(&destination, 0, 0, 0, &source, nullptr);
+	D3D12_RESOURCE_BARRIER barrier = {};
+	barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+	barrier.Transition.pResource = resource_;
+	barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+	barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+	barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+	commands->ResourceBarrier(1, &barrier);
+	D3D12_ASSERT_RETURN_VOID(commands->Close());
+	ID3D12CommandList* lists[] = {commands.Get()};
+	render_device_->getDirectCommandQueue()->ExecuteCommandLists(1, lists);
+	// Keep staging resources alive until this synchronous initialization finishes.
+	render_device_->waitGpuIdle();
+	uploaded_ = true;
+}
 
 void D3D12Texture::setGpuDebugName()
 {

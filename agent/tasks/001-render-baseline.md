@@ -42,6 +42,10 @@ Confirm that each remains applicable before fixing it:
 
 ## Completed work and checks
 
+Update: [task 002](002-build-fixes.md) restored Debug/Release builds and implemented
+the missing texture initialization API. Recheck the historical observations above
+against those changes. Runtime/visual checks and the broader M0 fixes remain open.
+
 Only this task document exists; no implementation has been performed under it.
 During the initial analysis, a Debug MSBuild attempt was stopped without a result
 or diagnostics. It does not establish a successful build. Release and visual checks

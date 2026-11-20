@@ -27,6 +27,9 @@ public:
 
 	virtual ~ITexture();
 
+	// Initialize a new single-mip RGBA8 texture from tightly packed pixels.
+	virtual void uploadPixels(const void* data, uint32_t size) = 0;
+
 protected:
 	ITexture(const Desc& desc);
 

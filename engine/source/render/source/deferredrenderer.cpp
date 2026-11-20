@@ -110,7 +110,7 @@ static ITexture* createTextureFromLoadedTextureData(
 		rgba_pixels[dst_base + 3] = (source_channels == 4) ? loaded_texture.pixel_data[src_base + 3] : 255;
 	}
 
-	///texture->uploadPixels(rgba_pixels.data(), static_cast<uint32_t>(rgba_pixels.size()));
+	texture->uploadPixels(rgba_pixels.data(), static_cast<uint32_t>(rgba_pixels.size()));
 	return texture.release();
 }
 

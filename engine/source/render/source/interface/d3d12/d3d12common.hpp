@@ -212,16 +212,16 @@ inline void setD3D12ResourceDebugNameImpl(DxObject* resource, std::string_view n
 }
 
 #define D3D12_ASSERT(expr) \
-	do { if (FAILED(expr)) { checkD3D12CallImpl((expr), #expr, __FILE__, __FUNCTION__, __LINE__); } } while (0)
+	do { const HRESULT call_result = (expr); if (FAILED(call_result)) { checkD3D12CallImpl(call_result, #expr, __FILE__, __FUNCTION__, __LINE__); } } while (0)
 
 #define D3D12_ASSERT_RETURN(expr, retValue) \
-	do { if (FAILED(expr)) { checkD3D12CallImpl((expr), #expr, __FILE__, __FUNCTION__, __LINE__); return (retValue); } } while (0)
+	do { const HRESULT call_result = (expr); if (FAILED(call_result)) { checkD3D12CallImpl(call_result, #expr, __FILE__, __FUNCTION__, __LINE__); return (retValue); } } while (0)
 
 #define D3D12_ASSERT_RETURN_VOID(expr) \
-	do { if (FAILED(expr)) { checkD3D12CallImpl((expr), #expr, __FILE__, __FUNCTION__, __LINE__); return; } } while (0)
+	do { const HRESULT call_result = (expr); if (FAILED(call_result)) { checkD3D12CallImpl(call_result, #expr, __FILE__, __FUNCTION__, __LINE__); return; } } while (0)
 
 #define D3D12_ASSERT_RETURN_NULL(expr) \
-	do { if (FAILED(expr)) { checkD3D12CallImpl((expr), #expr, __FILE__, __FUNCTION__, __LINE__); return nullptr; } } while (0)
+	do { const HRESULT call_result = (expr); if (FAILED(call_result)) { checkD3D12CallImpl(call_result, #expr, __FILE__, __FUNCTION__, __LINE__); return nullptr; } } while (0)
 
 #define PRINT_LOG(fmt, ...) printLogImpl((fmt), ##__VA_ARGS__)
 
@@ -235,11 +235,13 @@ inline void ignoreRelease(Args&&...) noexcept {}
 }
 
 #define D3D12_ASSERT(expr) (void)ignoreRelease((expr))
-#define D3D12_ASSERT_RETURN(expr, retValue)  do { if (!(cond)) { return (retValue); } } while (0)
+#define D3D12_ASSERT_RETURN(expr, retValue) do { if (FAILED(expr)) { return (retValue); } } while (0)
+#define D3D12_ASSERT_RETURN_VOID(expr) do { if (FAILED(expr)) { return; } } while (0)
+#define D3D12_ASSERT_RETURN_NULL(expr) do { if (FAILED(expr)) { return nullptr; } } while (0)
 
 #define PRINT_LOG(fmt, ...) (void)ignoreRelease((fmt), ##__VA_ARGS__)
 
-#define SET_D3D12_RESOURCE_DEBUG_NAME(obj, name) (void)ignoreRelease((obj), (name))
+#define SET_D3D12_RESOURCE_DEBUG_NAME(obj, fmt, ...) (void)ignoreRelease((obj), (fmt), ##__VA_ARGS__)
 
 #endif // _DEBUG
 

@@ -97,6 +97,7 @@ static inline void assertImpl(const char* expr, const char* file, int line, cons
 #else // !_DEBUG
 
 #define ASSERT(cond) (void(0))
+#define ASSERT_FAIL(msg, ...) (void(0))
 #define ASSERT_MSG(cond, msg, ...) (void(0))
 #define ASSERT_MSG_RETURN(cond, retValue, msg, ...) \
     do { if (!(cond)) { return (retValue); } } while (0)

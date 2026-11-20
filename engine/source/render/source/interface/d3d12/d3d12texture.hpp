@@ -33,6 +33,7 @@ public:
 	bool hasDsv() const { return dsv_descriptor_.has_value() && dsv_descriptor_->isValid(); }
 
 	~D3D12Texture() override;
+	void uploadPixels(const void* data, uint32_t size) override;
 
 private:
 	D3D12Texture(
@@ -46,6 +47,8 @@ private:
 
 private:
 	ID3D12Resource2* resource_ = nullptr;
+	D3D12RenderDevice* render_device_ = nullptr;
+	bool uploaded_ = false;
 	D3D12OwnedDescriptor srv_descriptor_;
 	D3D12OwnedDescriptor rtv_descriptor_;
 	std::optional<D3D12OwnedDescriptor> dsv_descriptor_;
