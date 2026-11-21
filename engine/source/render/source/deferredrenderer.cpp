@@ -6,6 +6,7 @@
 #include <engine/scene/camera.h>
 #include <engine/scene/actor.h>
 #include <engine/core/utility/assert.h>
+#include <engine/core/utility/log.h>
 #include <engine/core/asset/gltfloader.h>
 
 #include "interface/pipelinestate.hpp"
@@ -145,7 +146,8 @@ void DeferredRenderer::resize(uint32_t width, uint32_t height)
 	initResizableTextures(width, height);
 	if (render_settings_.render_width != width || render_settings_.render_height != height)
 	{
-		OutputDebugStringA("Resize skipped: failed to allocate the replacement depth texture or its DSV.\n");
+		LOG_WARNING("DeferredRenderer", "Resize to {}x{} skipped: failed to allocate the replacement depth texture or its DSV.",
+			width, height);
 	}
 }
 

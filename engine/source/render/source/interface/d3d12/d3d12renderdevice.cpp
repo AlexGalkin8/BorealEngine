@@ -10,6 +10,8 @@
 #include "pipelinestatemanager.hpp"
 #include "interface/gpuresourcemanager.h"
 
+#include <engine/core/utility/log.h>
+#include <engine/core/utility/utility.h>
 #include <engine/platform/window.h>
 
 
@@ -22,7 +24,7 @@ static void initDebugLayer(bool enable_validation)
 	if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debug_layer))))
 	{
 		debug_layer->EnableDebugLayer();
-		PRINT_LOG("D3D12 debug validation layer enabled\n");
+		LOG_INFO("D3D12", "Debug validation layer enabled.");
 
 		if (enable_validation)
 		{
@@ -30,13 +32,13 @@ static void initDebugLayer(bool enable_validation)
 			if (SUCCEEDED((debug_layer->QueryInterface(IID_PPV_ARGS(&debug_layer_1)))))
 			{
 				debug_layer_1->SetEnableGPUBasedValidation(true);
-				PRINT_LOG("D3D12 GPU-based validation enabled\n");
+				LOG_INFO("D3D12", "GPU-based validation enabled.");
 			}
 		}
 	}
 	else
 	{
-		PRINT_LOG("WARNING: Unable to enable D3D12 debug validation layer\n");
+		LOG_WARNING("D3D12", "Unable to enable the debug validation layer.");
 	}
 }
 
@@ -105,9 +107,9 @@ static HRESULT initBestGpuAdapter(IDXGIFactory6* dxgi_factory, Microsoft::WRL::C
 
 static void printAdapterInfo(IDXGIAdapter4* adapter)
 {
-	DXGI_ADAPTER_DESC3 desc;
-	adapter->GetDesc3(&desc);
-	PRINT_LOG("Selected GPU: %ls\n", desc.Description);
+	DXGI_ADAPTER_DESC3 desc = {};
+	D3D12_ASSERT_RETURN_VOID(adapter->GetDesc3(&desc));
+	LOG_INFO("D3D12", "Selected GPU: {}", utility::translateWStringToString(desc.Description));
 }
 
 
@@ -145,7 +147,7 @@ std::unique_ptr<D3D12RenderDevice> D3D12RenderDevice::create(const CreationDesc&
 	if (isWindowsDeveloperModeEnabled())
 	{
 		device->SetStablePowerState(TRUE);
-		PRINT_LOG("Developer Mode is enabled, setting stable power state for consistent GPU timings.\n");
+		LOG_INFO("D3D12", "Developer Mode is enabled. Requested a stable power state for GPU timing.");
 	}
 #endif
 

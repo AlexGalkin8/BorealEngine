@@ -7,7 +7,7 @@
 | [003 — base-color textures](003-base-color-textures.md) | User confirmed correct display; shutdown warning tracked in 004 |
 | [004 — renderer resource lifetime](004-render-resource-lifetime.md) | Complete. User verified sample shutdown on 2026-11-21. |
 | [005 — window resize](005-window-resize.md) | Builds and resize smoke check passed. Visual and D3D12 Output checks pending. |
-| [006 — engine logging](006-engine-logging.md) | Planned. Route swapchain diagnostics through the shared logger. |
+| [006 — engine logging](006-engine-logging.md) | Implemented. Release resize diagnostics verified. |
 
 Document substantial tasks that benefit from continuity across chats, not every
 minor edit. File name: `NNN-short-topic.md`. Keep the table current.

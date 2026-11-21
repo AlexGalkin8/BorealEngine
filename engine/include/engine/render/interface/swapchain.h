@@ -20,7 +20,6 @@ class ITexture;
 class ISwapChain : public internal::RenderObject
 {
 public:
-	// Both dimensions are zero when the back buffers are unavailable.
 	uint32_t getWidth() const;
 	uint32_t getHeight() const;
 

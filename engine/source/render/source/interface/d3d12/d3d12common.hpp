@@ -10,6 +10,7 @@
 #include <wrl/client.h>
 
 #if defined(_DEBUG)
+#include <engine/core/utility/log.h>
 #include <dxgidebug.h>
 #endif
 
@@ -164,24 +165,12 @@ inline constexpr DXGI_FORMAT translateTextureFormatToDxgiFormat(ETextureFormat f
 #if _DEBUG
 
 namespace {
-inline void printLogImpl(const char* fmt, ...)
+inline void checkD3D12CallImpl(HRESULT result, const char* expression,
+	const std::source_location& location = std::source_location::current())
 {
-	char buf[1024];
-	va_list ap;
-	va_start(ap, fmt);
-	vsnprintf_s(buf, sizeof(buf), _TRUNCATE, fmt, ap);
-	va_end(ap);
-	OutputDebugStringA(buf);
-}
-
-inline void checkD3D12CallImpl(HRESULT expr_ret_value, const char* expr, const char* file_name, const char* caller_func_name, unsigned int line)
-{
-	printLogImpl("D3D12 failed: %s HRESULT=0x%08X\nAt: %s:%u (%s)\n",
-		expr,
-		static_cast<unsigned int>(expr_ret_value),
-		file_name,
-		line,
-		caller_func_name);
+	logging::write(logging::ELogLevel::kError, "D3D12",
+		std::format("{} failed (HRESULT 0x{:08X}) in {}.", expression,
+			static_cast<uint32_t>(result), location.function_name()), location);
 	DebugBreak();
 }
 
@@ -214,18 +203,16 @@ inline void setD3D12ResourceDebugNameImpl(DxObject* resource, std::string_view n
 }
 
 #define D3D12_ASSERT(expr) \
-	do { const HRESULT call_result = (expr); if (FAILED(call_result)) { checkD3D12CallImpl(call_result, #expr, __FILE__, __FUNCTION__, __LINE__); } } while (0)
+	do { const HRESULT call_result = (expr); if (FAILED(call_result)) { checkD3D12CallImpl(call_result, #expr); } } while (0)
 
 #define D3D12_ASSERT_RETURN(expr, retValue) \
-	do { const HRESULT call_result = (expr); if (FAILED(call_result)) { checkD3D12CallImpl(call_result, #expr, __FILE__, __FUNCTION__, __LINE__); return (retValue); } } while (0)
+	do { const HRESULT call_result = (expr); if (FAILED(call_result)) { checkD3D12CallImpl(call_result, #expr); return (retValue); } } while (0)
 
 #define D3D12_ASSERT_RETURN_VOID(expr) \
-	do { const HRESULT call_result = (expr); if (FAILED(call_result)) { checkD3D12CallImpl(call_result, #expr, __FILE__, __FUNCTION__, __LINE__); return; } } while (0)
+	do { const HRESULT call_result = (expr); if (FAILED(call_result)) { checkD3D12CallImpl(call_result, #expr); return; } } while (0)
 
 #define D3D12_ASSERT_RETURN_NULL(expr) \
-	do { const HRESULT call_result = (expr); if (FAILED(call_result)) { checkD3D12CallImpl(call_result, #expr, __FILE__, __FUNCTION__, __LINE__); return nullptr; } } while (0)
-
-#define PRINT_LOG(fmt, ...) printLogImpl((fmt), ##__VA_ARGS__)
+	do { const HRESULT call_result = (expr); if (FAILED(call_result)) { checkD3D12CallImpl(call_result, #expr); return nullptr; } } while (0)
 
 #define SET_D3D12_RESOURCE_DEBUG_NAME(obj, fmt, ...) setD3D12ResourceDebugNameImpl((obj), (fmt), ##__VA_ARGS__);
 
@@ -240,8 +227,6 @@ inline void ignoreRelease(Args&&...) noexcept {}
 #define D3D12_ASSERT_RETURN(expr, retValue) do { if (FAILED(expr)) { return (retValue); } } while (0)
 #define D3D12_ASSERT_RETURN_VOID(expr) do { if (FAILED(expr)) { return; } } while (0)
 #define D3D12_ASSERT_RETURN_NULL(expr) do { if (FAILED(expr)) { return nullptr; } } while (0)
-
-#define PRINT_LOG(fmt, ...) (void)ignoreRelease((fmt), ##__VA_ARGS__)
 
 #define SET_D3D12_RESOURCE_DEBUG_NAME(obj, fmt, ...) (void)ignoreRelease((obj), (fmt), ##__VA_ARGS__)
 

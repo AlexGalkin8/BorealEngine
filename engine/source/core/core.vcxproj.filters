@@ -41,6 +41,9 @@
     <ClInclude Include="..\..\include\engine\core\utility\enum.h">
       <Filter>include\utility</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\engine\core\utility\log.h">
+      <Filter>include\utility</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\utility.cpp">
@@ -50,6 +53,9 @@
       <Filter>source\asset</Filter>
     </ClCompile>
     <ClCompile Include="source\enum.cpp">
+      <Filter>source\utility</Filter>
+    </ClCompile>
+    <ClCompile Include="source\log.cpp">
       <Filter>source\utility</Filter>
     </ClCompile>
   </ItemGroup>

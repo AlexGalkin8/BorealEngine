@@ -12,6 +12,8 @@ conventions and do not rewrite the project solely for consistency.
 - Scoped enums usually use `E` (`EBufferUsage`); enumerators use `kVertex`.
   Preserve existing exceptions, such as math/conventions.
 - Functions/methods: lowerCamelCase (`createBuffer`, `setLookAt`).
+- Name conversion functions `translate<Source>To<Target>`, for example
+  `translateLogLevelToString` for converting an `ELogLevel` to its text label.
 - Default for new locals, parameters and struct fields: snake_case (`render_device`).
   Private fields use a trailing underscore (`mesh_slots_`). Extend existing types
   using their local convention.

@@ -3,6 +3,7 @@
 #include "d3d12renderdevice.hpp"
 #include "d3d12texture.hpp"
 
+#include <engine/core/utility/log.h>
 #include <engine/platform/window.h>
 
 
@@ -40,7 +41,13 @@ void D3D12SwapChain::resize(uint32_t width, uint32_t height)
 	ASSERT_MSG_RETURN_VOID(width > 0 && height > 0, "Swapchain resize requires a nonzero size");
 
 	DXGI_SWAP_CHAIN_DESC1 previous_desc = {};
-	D3D12_ASSERT_RETURN_VOID(swap_chain_->GetDesc1(&previous_desc));
+	const HRESULT describe_result = swap_chain_->GetDesc1(&previous_desc);
+	if (FAILED(describe_result))
+	{
+		LOG_WARNING("D3D12SwapChain", "Resize to {}x{} skipped: GetDesc1 failed (HRESULT 0x{:08X}).",
+			width, height, static_cast<uint32_t>(describe_result));
+	}
+	D3D12_ASSERT_RETURN_VOID(describe_result);
 
 	if (previous_desc.Width == width && previous_desc.Height == height)
 	{
@@ -51,6 +58,11 @@ void D3D12SwapChain::resize(uint32_t width, uint32_t height)
 	// DXGI requires all application references to the old back buffers to be released.
 	back_buffers_ = {};
 	const HRESULT resize_result = swap_chain_->ResizeBuffers(kBackBufferCount, width, height, previous_desc.Format, previous_desc.Flags);
+	if (FAILED(resize_result))
+	{
+		LOG_WARNING("D3D12SwapChain", "ResizeBuffers to {}x{} failed (HRESULT 0x{:08X}). Reacquiring previous buffers.",
+			width, height, static_cast<uint32_t>(resize_result));
+	}
 	D3D12_ASSERT(resize_result);
 
 	const bool buffers_acquired = acquireBackBuffers();
@@ -59,8 +71,14 @@ void D3D12SwapChain::resize(uint32_t width, uint32_t height)
 		return;
 	}
 
-	D3D12_ASSERT_RETURN_VOID(swap_chain_->ResizeBuffers(kBackBufferCount,
-		previous_desc.Width, previous_desc.Height, previous_desc.Format, previous_desc.Flags));
+	const HRESULT restore_result = swap_chain_->ResizeBuffers(kBackBufferCount,
+		previous_desc.Width, previous_desc.Height, previous_desc.Format, previous_desc.Flags);
+	if (FAILED(restore_result))
+	{
+		LOG_ERROR("D3D12SwapChain", "ResizeBuffers failed while restoring {}x{} (HRESULT 0x{:08X}).",
+			previous_desc.Width, previous_desc.Height, static_cast<uint32_t>(restore_result));
+	}
+	D3D12_ASSERT_RETURN_VOID(restore_result);
 	acquireBackBuffers();
 }
 
@@ -99,7 +117,13 @@ bool D3D12SwapChain::acquireBackBuffers()
 	for (uint32_t i = 0; i < kBackBufferCount; i++)
 	{
 		Microsoft::WRL::ComPtr<ID3D12Resource2> resource;
-		D3D12_ASSERT_RETURN(swap_chain_->GetBuffer(i, IID_PPV_ARGS(&resource)), false);
+		const HRESULT acquire_result = swap_chain_->GetBuffer(i, IID_PPV_ARGS(&resource));
+		if (FAILED(acquire_result))
+		{
+			LOG_ERROR("D3D12SwapChain", "GetBuffer failed for back buffer {} (HRESULT 0x{:08X}).",
+				i, static_cast<uint32_t>(acquire_result));
+		}
+		D3D12_ASSERT_RETURN(acquire_result, false);
 
 		const D3D12_RESOURCE_DESC buffer_desc = resource->GetDesc();
 		ITexture::Desc texture_desc = {};
@@ -109,6 +133,10 @@ bool D3D12SwapChain::acquireBackBuffers()
 
 		back_buffers[i] = D3D12Texture::createBackBuffer(
 			static_cast<D3D12RenderDevice&>(render_device_), texture_desc, resource.Get());
+		if (!back_buffers[i])
+		{
+			LOG_ERROR("D3D12SwapChain", "Failed to create views for back buffer {}.", i);
+		}
 		ASSERT_MSG_RETURN(back_buffers[i] != nullptr, false, "Failed to create views for back buffer %u", i);
 		resource.Detach();
 		SET_RENDER_OBJECT_DEBUG_NAME(*back_buffers[i], "BackBuffer_{}", i);
