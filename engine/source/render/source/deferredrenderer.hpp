@@ -22,7 +22,6 @@ struct MeshSlot;
 namespace render {
 class IPipelineState;
 class ICommandList;
-class ISwapChain;
 class IBuffer;
 class ITexture;
 }  // namespace render
@@ -36,6 +35,7 @@ public:
 	static std::unique_ptr<DeferredRenderer> create(IRenderDevice& render_device, const RenderSettings& render_settings);
 
 	void render(const scene::Scene& scene, const scene::Camera& camera, ITexture& output_target) override;
+	void resize(uint32_t width, uint32_t height) override;
 
 	~DeferredRenderer() override;
 
@@ -67,6 +67,7 @@ private:
 	DeferredRenderer(IRenderDevice& render_device, const RenderSettings& render_settings);
 
 	void initTextures();
+	void initResizableTextures(uint32_t width, uint32_t height);
 	void initPipelineStates();
 
 	void GBufferPass(const scene::Scene& scene, const scene::Camera& camera, ITexture& output_target);

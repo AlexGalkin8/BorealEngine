@@ -5,6 +5,20 @@
 
 namespace render {
 
+uint32_t ISwapChain::getWidth() const
+{
+	const std::unique_ptr<ITexture>& back_buffer = back_buffers_.front();
+	return back_buffer ? back_buffer->getWidth() : 0;
+}
+
+
+uint32_t ISwapChain::getHeight() const
+{
+	const std::unique_ptr<ITexture>& back_buffer = back_buffers_.front();
+	return back_buffer ? back_buffer->getHeight() : 0;
+}
+
+
 ISwapChain::~ISwapChain()
 {
 }

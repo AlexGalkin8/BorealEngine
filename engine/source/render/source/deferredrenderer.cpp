@@ -11,7 +11,6 @@
 #include "interface/pipelinestate.hpp"
 #include "interface/renderdevice.h"
 #include "interface/commandlist.h"
-#include "interface/swapchain.h"
 #include "interface/texture.h"
 #include "interface/buffer.h"
 
@@ -118,10 +117,11 @@ static ITexture* createTextureFromLoadedTextureData(
 
 std::unique_ptr<DeferredRenderer> DeferredRenderer::create(IRenderDevice& render_device, const RenderSettings& render_settings)
 {
-	std::unique_ptr<DeferredRenderer> deferred_renderer;
-	deferred_renderer.reset(new DeferredRenderer(render_device, render_settings));
-	deferred_renderer->initPipelineStates();
+	std::unique_ptr<DeferredRenderer> deferred_renderer(new DeferredRenderer(render_device, render_settings));
 	deferred_renderer->initTextures();
+	ASSERT_MSG_RETURN_NULL(deferred_renderer->depth_texture_ && deferred_renderer->default_white_texture_,
+		"Failed to initialize renderer textures");
+	deferred_renderer->initPipelineStates();
 	return deferred_renderer;
 }
 
@@ -130,6 +130,150 @@ void DeferredRenderer::render(const scene::Scene& scene, const scene::Camera& ca
 {
 	GBufferPass(scene, camera, output_target);
 	render_device_.executeCommandLists(ECommandListType::kDirect);
+}
+
+
+void DeferredRenderer::resize(uint32_t width, uint32_t height)
+{
+	ASSERT_MSG_RETURN_VOID(width > 0 && height > 0, "Renderer resize requires a nonzero output size");
+
+	if (render_settings_.render_width == width && render_settings_.render_height == height)
+	{
+		return;
+	}
+
+	initResizableTextures(width, height);
+	if (render_settings_.render_width != width || render_settings_.render_height != height)
+	{
+		OutputDebugStringA("Resize skipped: failed to allocate the replacement depth texture or its DSV.\n");
+	}
+}
+
+
+DeferredRenderer::~DeferredRenderer()
+{}
+
+
+DeferredRenderer::DeferredRenderer(IRenderDevice& render_device, const RenderSettings& render_settings)
+	: IRenderer(render_device, render_settings)
+{}
+
+
+void DeferredRenderer::initTextures()
+{
+	GpuResourceManager& resource_manager = render_device_.getResourceManager();
+	ITexture::Desc white_desc = {};
+	white_desc.width = 1;
+	white_desc.height = 1;
+	white_desc.format = ETextureFormat::kRGBA8_Unorm;
+	ITexture* white_texture = resource_manager.createTexture(white_desc);
+	if (!white_texture)
+	{
+		return;
+	}
+
+	initResizableTextures(render_settings_.render_width, render_settings_.render_height);
+	if (!depth_texture_)
+	{
+		resource_manager.releaseTexture(*white_texture);
+		return;
+	}
+
+	static constexpr uint8_t kWhitePixel[4] = { 255, 255, 255, 255 };
+	white_texture->uploadPixels(kWhitePixel, sizeof(kWhitePixel));
+	default_white_texture_ = white_texture;
+}
+
+
+void DeferredRenderer::initResizableTextures(uint32_t width, uint32_t height)
+{
+	GpuResourceManager& resource_manager = render_device_.getResourceManager();
+
+	ITexture::Desc depth_desc = {};
+	depth_desc.width = width;
+	depth_desc.height = height;
+	depth_desc.format = ETextureFormat::D32_Float;
+	ITexture* replacement_depth = resource_manager.createTexture(depth_desc);
+	ASSERT_MSG_RETURN_VOID(replacement_depth != nullptr, "Failed to create the depth texture");
+
+	if (depth_texture_)
+	{
+		resource_manager.releaseTexture(*depth_texture_);
+	}
+
+	depth_texture_ = replacement_depth;
+	render_settings_.render_width = width;
+	render_settings_.render_height = height;
+}
+
+
+void DeferredRenderer::initPipelineStates()
+{
+	{
+		GraphicsPipelineDesc mesh_desc = {};
+		mesh_desc.shader_state.shader_name = "base";
+		mesh_desc.shader_state.addDefine(L"USE_TEXTURE", L"1");
+		mesh_desc.input_layout_state.topology = EPrimitiveTopology::kTriangle;
+		mesh_desc.input_layout_state.addAttribute(ESemanticType::kPosition, ETextureFormat::kRGB32_Float);
+		mesh_desc.input_layout_state.addAttribute(ESemanticType::kTexCoord, ETextureFormat::kRG32_Float);
+		mesh_desc.input_layout_state.addAttribute(ESemanticType::kColor, ETextureFormat::kRGBA32_Float);
+		mesh_desc.resource_layout_state[0] = RootParameter::makeConstants32Bits(0, 32, 0);
+		mesh_desc.resource_layout_state[1] = RootParameter::makeDescriptorTable({ DescriptorRange{ DescriptorType::kSRV, 0, 1 } });
+		mesh_desc.rasterizer_state.cull_mode = ECullMode::kNone;
+		mesh_desc.rasterizer_state.depth_clip_enable = true;
+		mesh_desc.rasterizer_state.fill_mode = EFillMode::kSolid;
+		mesh_desc.output_merger_state.addRenderTarget(ETextureFormat::kRGBA8_Unorm);
+		mesh_desc.output_merger_state.depth_stencil.format = ETextureFormat::D32_Float;
+		mesh_desc.output_merger_state.depth_stencil.depth_enable = true;
+		mesh_desc.output_merger_state.depth_stencil.depth_write = true;
+		mesh_desc.output_merger_state.depth_stencil.depth_func = EDepthFunc::kLess;
+		mesh_desc.output_merger_state.depth_stencil.stencil_enable = false;
+		mesh_pipeline_state_ = &pipeline_state_manager_.createPipelineState(mesh_desc);
+	}
+}
+
+
+void DeferredRenderer::GBufferPass(const scene::Scene& scene, const scene::Camera& camera, ITexture& output_target)
+{
+	ICommandList& command_list = render_device_.acquireCommandList(ECommandListType::kDirect, "GBufferPass");
+
+	command_list.transitionTexture(output_target, EResourceState::kPresent, EResourceState::kRenderTarget);
+	command_list.setRenderTarget(output_target, depth_texture_);
+	command_list.clearRenderTarget(output_target, 0.1f, 0.1f, 0.1f, 1.0f);
+	command_list.clearDepthStencil(*depth_texture_);
+	command_list.setViewport(0.0f, 0.0f, static_cast<float>(output_target.getDesc().width), static_cast<float>(output_target.getDesc().height));
+	command_list.setScissorRect(0, 0, static_cast<int32_t>(output_target.getDesc().width), static_cast<int32_t>(output_target.getDesc().height));
+
+	command_list.setPipelineState(*mesh_pipeline_state_);
+	command_list.setPrimitiveTopology(EPrimitiveTopology::kTriangle);
+
+	for (const scene::StaticMeshActor* static_mesh_actor : buildStaticMeshBucket(scene))
+	{
+		CameraObjectConstants constants = {};
+		constants.world = static_mesh_actor->getTransform().toMatrix4x4();
+		constants.view_projection = camera.getViewProjectionMatrix();
+		command_list.setGraphicsRoot32BitConstants(0, 32, &constants);
+
+		const auto& mesh_slots = static_mesh_actor->getMeshRenderer().getMeshSlots();
+		for (const scene::MeshSlot& slot : mesh_slots)
+		{
+			const RenderMesh* imported_mesh = getOrCreateRenderMesh(slot.mesh);
+			if (imported_mesh != nullptr)
+			{
+				ASSERT_MSG_RETURN_VOID(imported_mesh->base_color_texture != nullptr, "Base color texture is not initialized");
+				command_list.setDescriptorSet(1, { DescriptorResource::textureSRV(imported_mesh->base_color_texture) });
+
+				command_list.setVertexBuffer(*imported_mesh->vertex_buffer, imported_mesh->vertex_stride);
+				command_list.setIndexBuffer(*imported_mesh->index_buffer);
+				command_list.drawIndexed(imported_mesh->index_count, 0, 0);
+				continue;
+			}
+		}
+	}
+
+	command_list.transitionTexture(output_target, EResourceState::kRenderTarget, EResourceState::kPresent);
+
+	render_device_.submitCommandList(command_list);
 }
 
 
@@ -248,110 +392,6 @@ const DeferredRenderer::RenderMesh* DeferredRenderer::getOrCreateRenderMesh(cons
 	auto [inserted_it, inserted] = render_meshes_.emplace(mesh_cache_key, std::move(gpu_data));
 	ASSERT(inserted);
 	return &inserted_it->second;
-}
-
-
-void DeferredRenderer::GBufferPass(const scene::Scene& scene, const scene::Camera& camera, ITexture& output_target)
-{
-	ICommandList& command_list = render_device_.acquireCommandList(ECommandListType::kDirect, "GBufferPass");
-
-	command_list.transitionTexture(output_target, EResourceState::kPresent, EResourceState::kRenderTarget);
-	command_list.setRenderTarget(output_target, depth_texture_);
-	command_list.clearRenderTarget(output_target, 0.1f, 0.1f, 0.1f, 1.0f);
-	command_list.clearDepthStencil(*depth_texture_);
-	command_list.setViewport(0.0f, 0.0f, static_cast<float>(output_target.getDesc().width), static_cast<float>(output_target.getDesc().height));
-	command_list.setScissorRect(0, 0, static_cast<int32_t>(output_target.getDesc().width), static_cast<int32_t>(output_target.getDesc().height));
-
-	command_list.setPipelineState(*mesh_pipeline_state_);
-	command_list.setPrimitiveTopology(EPrimitiveTopology::kTriangle);
-
-	for (const scene::StaticMeshActor* static_mesh_actor : buildStaticMeshBucket(scene))
-	{
-		CameraObjectConstants constants = {};
-		constants.world = static_mesh_actor->getTransform().toMatrix4x4();
-		constants.view_projection = camera.getViewProjectionMatrix();
-		command_list.setGraphicsRoot32BitConstants(0, 32, &constants);
-
-		const auto& mesh_slots = static_mesh_actor->getMeshRenderer().getMeshSlots();
-		for (const scene::MeshSlot& slot : mesh_slots)
-		{
-			const RenderMesh* imported_mesh = getOrCreateRenderMesh(slot.mesh);
-			if (imported_mesh != nullptr)
-			{
-				ASSERT_MSG_RETURN_VOID(imported_mesh->base_color_texture != nullptr, "Base color texture is not initialized");
-				command_list.setDescriptorSet(1, { DescriptorResource::textureSRV(imported_mesh->base_color_texture) });
-
-				command_list.setVertexBuffer(*imported_mesh->vertex_buffer, imported_mesh->vertex_stride);
-				command_list.setIndexBuffer(*imported_mesh->index_buffer);
-				command_list.drawIndexed(imported_mesh->index_count, 0, 0);
-				continue;
-			}
-		}
-	}
-
-	command_list.transitionTexture(output_target, EResourceState::kRenderTarget, EResourceState::kPresent);
-
-	render_device_.submitCommandList(command_list);
-}
-
-
-DeferredRenderer::~DeferredRenderer()
-{}
-
-
-DeferredRenderer::DeferredRenderer(IRenderDevice& render_device, const RenderSettings& render_settings)
-	: IRenderer(render_device, render_settings)
-{}
-
-
-void DeferredRenderer::initTextures()
-{
-	ITexture::Desc depth_desc = {};
-	depth_desc.width = render_settings_.render_width;
-	depth_desc.height = render_settings_.render_height;
-	depth_desc.depth = 1;
-	depth_desc.mipCount = 1;
-	depth_desc.format = ETextureFormat::D32_Float;
-	ITexture* depth_texture = render_device_.getResourceManager().createTexture(depth_desc);
-	depth_texture_ = depth_texture;
-
-	ITexture::Desc white_desc = {};
-	white_desc.width = 1;
-	white_desc.height = 1;
-	white_desc.depth = 1;
-	white_desc.mipCount = 1;
-	white_desc.format = ETextureFormat::kRGBA8_Unorm;
-	ITexture* default_white_texture = render_device_.getResourceManager().createTexture(white_desc);
-	default_white_texture_ = default_white_texture;
-
-	static constexpr uint8_t kWhitePixel[4] = { 255, 255, 255, 255 };
-	default_white_texture_->uploadPixels(kWhitePixel, sizeof(kWhitePixel));
-}
-
-
-void DeferredRenderer::initPipelineStates()
-{
-	{
-		GraphicsPipelineDesc mesh_desc = {};
-		mesh_desc.shader_state.shader_name = "base";
-		mesh_desc.shader_state.addDefine(L"USE_TEXTURE", L"1");
-		mesh_desc.input_layout_state.topology = EPrimitiveTopology::kTriangle;
-		mesh_desc.input_layout_state.addAttribute(ESemanticType::kPosition, ETextureFormat::kRGB32_Float);
-		mesh_desc.input_layout_state.addAttribute(ESemanticType::kTexCoord, ETextureFormat::kRG32_Float);
-		mesh_desc.input_layout_state.addAttribute(ESemanticType::kColor, ETextureFormat::kRGBA32_Float);
-		mesh_desc.resource_layout_state[0] = RootParameter::makeConstants32Bits(0, 32, 0);
-		mesh_desc.resource_layout_state[1] = RootParameter::makeDescriptorTable({ DescriptorRange{ DescriptorType::kSRV, 0, 1 } });
-		mesh_desc.rasterizer_state.cull_mode = ECullMode::kNone;
-		mesh_desc.rasterizer_state.depth_clip_enable = true;
-		mesh_desc.rasterizer_state.fill_mode = EFillMode::kSolid;
-		mesh_desc.output_merger_state.addRenderTarget(ETextureFormat::kRGBA8_Unorm);
-		mesh_desc.output_merger_state.depth_stencil.format = ETextureFormat::D32_Float;
-		mesh_desc.output_merger_state.depth_stencil.depth_enable = true;
-		mesh_desc.output_merger_state.depth_stencil.depth_write = true;
-		mesh_desc.output_merger_state.depth_stencil.depth_func = EDepthFunc::kLess;
-		mesh_desc.output_merger_state.depth_stencil.stencil_enable = false;
-		mesh_pipeline_state_ = &pipeline_state_manager_.createPipelineState(mesh_desc);
-	}
 }
 
 }  // namespace render

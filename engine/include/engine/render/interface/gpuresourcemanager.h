@@ -7,11 +7,13 @@
 #include <vector>
 
 namespace render {
-
 class IRenderDevice;
+}
 
-// Owns GPU resources for the lifetime of the device. Returned pointers are borrowed.
-// Individual eviction/retirement is deliberately not exposed yet.
+
+namespace render {
+
+// Owns GPU resources. Returned pointers are borrowed until release or device shutdown.
 class GpuResourceManager final : public utility::NonCopyable
 {
 	friend class IRenderDevice;
@@ -19,6 +21,9 @@ class GpuResourceManager final : public utility::NonCopyable
 public:
 	IBuffer* createBuffer(const IBuffer::Desc& desc);
 	ITexture* createTexture(const ITexture::Desc& desc);
+
+	void releaseTexture(ITexture& texture);
+
 	~GpuResourceManager();
 
 private:

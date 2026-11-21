@@ -20,8 +20,14 @@ class ITexture;
 class ISwapChain : public internal::RenderObject
 {
 public:
-	ITexture& getCurrentBackBuffer() { return *back_buffers_.at(current_back_buffer_index_).get(); };
+	// Both dimensions are zero when the back buffers are unavailable.
+	uint32_t getWidth() const;
+	uint32_t getHeight() const;
 
+	// Requires available back buffers.
+	ITexture& getCurrentBackBuffer() { return *back_buffers_.at(current_back_buffer_index_); }
+
+	// Requires nonzero dimensions and an idle GPU.
 	virtual void resize(uint32_t width, uint32_t height) = 0;
 	virtual void present() = 0;
 

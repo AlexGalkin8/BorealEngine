@@ -38,16 +38,17 @@ std::unique_ptr<Engine> Engine::create(const std::string& settings_file_name, st
 	ASSERT_MSG_RETURN_NULL(engine->window_ != nullptr, "Failed to create window");
 
 	engine->input_ = platform::IInput::create(engine->settings_->engine_settings.data_root_path,
-	                                           engine->settings_->engine_settings.input_config_name,
-	                                           engine->window_->getHandle());
+		engine->settings_->engine_settings.input_config_name,
+		engine->window_->getHandle());
 	ASSERT_MSG_RETURN_NULL(engine->input_ != nullptr, "Failed to create input");
 
 	engine->swap_chain_ = engine->render_device_->createSwapChain(*engine->window_);
 	ASSERT_MSG_RETURN_NULL(engine->swap_chain_ != nullptr, "Failed to create swap chain");
 
-	engine->renderer_ = render::IRenderer::create<render::EShadingTechnique::kDeferred>(
-		*engine->render_device_,
-		engine->settings_->render_settings);
+	render::RenderSettings render_settings = engine->settings_->render_settings;
+	render_settings.render_width = engine->swap_chain_->getWidth();
+	render_settings.render_height = engine->swap_chain_->getHeight();
+	engine->renderer_ = render::IRenderer::create<render::EShadingTechnique::kDeferred>(*engine->render_device_, render_settings);
 	ASSERT_MSG_RETURN_NULL(engine->renderer_ != nullptr, "Failed to create renderer");
 
 	// Create default scene
@@ -62,8 +63,7 @@ std::unique_ptr<Engine> Engine::create(const std::string& settings_file_name, st
 			engine->input_.get());
 		ASSERT_MSG_RETURN_NULL(default_scene != nullptr, "Failed to create default scene");
 
-		const float aspect = static_cast<float>(engine->settings_->engine_settings.window_width)
-			/ static_cast<float>(engine->settings_->engine_settings.window_height);
+		const float aspect = static_cast<float>(render_settings.render_width) / static_cast<float>(render_settings.render_height);
 		default_scene->getCamera().setAspect(aspect);
 
 		engine->scenes_.push_back(std::move(default_scene));
@@ -133,7 +133,15 @@ Engine::Engine()
 
 void Engine::handleResize(uint32_t width, uint32_t height)
 {
-	if (!swap_chain_ || !render_device_ || width == 0 || height == 0)
+	ASSERT_MSG_RETURN_VOID(swap_chain_ && renderer_, "Resize requires an initialized swapchain and renderer");
+	if (width == 0 || height == 0)
+	{
+		return;
+	}
+
+	const render::RenderSettings& render_settings = renderer_->getRenderSettings();
+	if (swap_chain_->getWidth() == width && swap_chain_->getHeight() == height &&
+		render_settings.render_width == width && render_settings.render_height == height)
 	{
 		return;
 	}
@@ -141,13 +149,26 @@ void Engine::handleResize(uint32_t width, uint32_t height)
 	render_device_->waitGpuIdle();
 	swap_chain_->resize(width, height);
 
+	const uint32_t output_width = swap_chain_->getWidth();
+	const uint32_t output_height = swap_chain_->getHeight();
+	if (output_width == 0 || output_height == 0)
+	{
+		return;
+	}
+
+	renderer_->resize(output_width, output_height);
+	if (render_settings.render_width != output_width || render_settings.render_height != output_height)
+	{
+		swap_chain_->resize(render_settings.render_width, render_settings.render_height);
+		return;
+	}
+
 	if (current_scene_)
 	{
-		const float aspect = static_cast<float>(width) / static_cast<float>(height);
+		const float aspect = static_cast<float>(output_width) / static_cast<float>(output_height);
 		current_scene_->getCamera().setAspect(aspect);
 	}
 }
-
 
 
 void Engine::setPauseOnFocusLost(bool enabled)
@@ -196,6 +217,12 @@ void Engine::frame()
 
 	input_->update();
 	current_scene_->update(dt);
+
+	const render::RenderSettings& render_settings = renderer_->getRenderSettings();
+	if (swap_chain_->getWidth() != render_settings.render_width || swap_chain_->getHeight() != render_settings.render_height)
+	{
+		return;
+	}
 
 	renderer_->render(*current_scene_, current_scene_->getCamera(), swap_chain_->getCurrentBackBuffer());
 

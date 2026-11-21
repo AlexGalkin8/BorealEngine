@@ -164,7 +164,7 @@ std::unique_ptr<D3D12RenderDevice> D3D12RenderDevice::create(const CreationDesc&
 	render_device->dsv_descriptor_heap_ = D3D12DescriptorHeap::create(
 		render_device->device_,
 		D3D12_DESCRIPTOR_HEAP_TYPE_DSV,
-		1);
+		2);
 
 	render_device->cbv_srv_uav_cpu_descriptor_heap_ = D3D12DescriptorHeap::create(
 		render_device->device_,

@@ -25,6 +25,9 @@ public:
 public:
 	const Desc& getDesc() const { return desc_; }
 
+	uint32_t getWidth() const { return desc_.width; }
+	uint32_t getHeight() const { return desc_.height; }
+
 	virtual ~ITexture();
 
 	// Initialize a new single-mip RGBA8 texture from tightly packed pixels.

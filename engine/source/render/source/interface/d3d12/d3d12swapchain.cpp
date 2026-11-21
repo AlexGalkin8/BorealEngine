@@ -8,10 +8,8 @@
 
 namespace render {
 
-std::unique_ptr<D3D12SwapChain> D3D12SwapChain::create(const IRenderDevice& render_device, const platform::IWindow& window)
+std::unique_ptr<D3D12SwapChain> D3D12SwapChain::create(D3D12RenderDevice& render_device, const platform::IWindow& window)
 {
-	D3D12RenderDevice& d3d12_render_interface = const_cast<D3D12RenderDevice&>(static_cast<const D3D12RenderDevice&>(render_device));
-
 	DXGI_SWAP_CHAIN_DESC1 swap_chain_desc = {};
 	swap_chain_desc.BufferCount = kBackBufferCount;
 	swap_chain_desc.Width = window.getWidth();
@@ -24,43 +22,53 @@ std::unique_ptr<D3D12SwapChain> D3D12SwapChain::create(const IRenderDevice& rend
 	Microsoft::WRL::ComPtr<IDXGISwapChain1> swap_chain;
 
 	D3D12_ASSERT_RETURN_NULL(
-		d3d12_render_interface.getD3D12DxgiFactory()->CreateSwapChainForHwnd(
-		d3d12_render_interface.getDirectCommandQueue(),
-		static_cast<HWND>(window.getHandle()),
-		&swap_chain_desc, nullptr, nullptr, &swap_chain));
+		render_device.getD3D12DxgiFactory()->CreateSwapChainForHwnd(
+			render_device.getDirectCommandQueue(),
+			static_cast<HWND>(window.getHandle()),
+			&swap_chain_desc, nullptr, nullptr, &swap_chain));
 
-	std::array<std::unique_ptr<ITexture>, kBackBufferCount> back_buffers;
-	for (uint32_t i = 0; i < kBackBufferCount; i++)
-	{
-		ITexture::Desc texture_desc = {};
-		texture_desc.width = swap_chain_desc.Width;
-		texture_desc.height = swap_chain_desc.Height;
-		texture_desc.depth = 1;
-		texture_desc.mipCount = 1;
-		texture_desc.format = kBackBufferFormat;
-
-		ID3D12Resource2* resource = nullptr;
-		D3D12_ASSERT_RETURN_NULL(swap_chain->GetBuffer(i, IID_PPV_ARGS(&resource)));
-
-		back_buffers[i] = D3D12Texture::createBackBuffer(d3d12_render_interface, texture_desc, resource);
-		ASSERT_MSG_RETURN_NULL(back_buffers[i] != nullptr, "D3D12SwapChain: failed to create back buffer texture");
-		SET_RENDER_OBJECT_DEBUG_NAME(*back_buffers[i], "BackBuffer_{}", i);
-	}
-
-	return std::unique_ptr<D3D12SwapChain>(new D3D12SwapChain(
-		d3d12_render_interface,
-		std::move(back_buffers),
-		swap_chain.Detach()));
+	std::unique_ptr<D3D12SwapChain> result(new D3D12SwapChain(render_device, swap_chain.Get()));
+	swap_chain.Detach();
+	ASSERT_MSG_RETURN_NULL(result->acquireBackBuffers(), "Failed to acquire initial swapchain back buffers");
+	return result;
 }
 
 
-D3D12SwapChain::D3D12SwapChain(
-	D3D12RenderDevice& render_device,
-	std::array<std::unique_ptr<ITexture>, kBackBufferCount>&& back_buffers,
-	IDXGISwapChain1* swap_chain)
-	: ISwapChain(render_device, std::move(back_buffers))
-	, swap_chain_(swap_chain)
+void D3D12SwapChain::resize(uint32_t width, uint32_t height)
 {
+	ASSERT_MSG_RETURN_VOID(swap_chain_ != nullptr, "Resize requires a native swapchain");
+	ASSERT_MSG_RETURN_VOID(width > 0 && height > 0, "Swapchain resize requires a nonzero size");
+
+	DXGI_SWAP_CHAIN_DESC1 previous_desc = {};
+	D3D12_ASSERT_RETURN_VOID(swap_chain_->GetDesc1(&previous_desc));
+
+	if (previous_desc.Width == width && previous_desc.Height == height)
+	{
+		if (!back_buffers_.front()) acquireBackBuffers();
+		return;
+	}
+
+	// DXGI requires all application references to the old back buffers to be released.
+	back_buffers_ = {};
+	const HRESULT resize_result = swap_chain_->ResizeBuffers(kBackBufferCount, width, height, previous_desc.Format, previous_desc.Flags);
+	D3D12_ASSERT(resize_result);
+
+	const bool buffers_acquired = acquireBackBuffers();
+	if (buffers_acquired || FAILED(resize_result))
+	{
+		return;
+	}
+
+	D3D12_ASSERT_RETURN_VOID(swap_chain_->ResizeBuffers(kBackBufferCount,
+		previous_desc.Width, previous_desc.Height, previous_desc.Format, previous_desc.Flags));
+	acquireBackBuffers();
+}
+
+
+void D3D12SwapChain::present()
+{
+	D3D12_ASSERT_RETURN_VOID(swap_chain_->Present(1, 0));
+	updateCurrentBackBufferIndex();
 }
 
 
@@ -70,67 +78,50 @@ D3D12SwapChain::~D3D12SwapChain()
 }
 
 
-void D3D12SwapChain::present()
+D3D12SwapChain::D3D12SwapChain(D3D12RenderDevice& render_device, IDXGISwapChain1* swap_chain)
+	: ISwapChain(render_device, {})
+	, swap_chain_(swap_chain)
 {
-	swap_chain_->Present(1, 0);
-	updateCurrentBackBufferIndex();
 }
 
 
 void D3D12SwapChain::updateCurrentBackBufferIndex()
 {
 	Microsoft::WRL::ComPtr<IDXGISwapChain3> swap_chain3;
-	if (SUCCEEDED(swap_chain_->QueryInterface(IID_PPV_ARGS(&swap_chain3))))
+	D3D12_ASSERT_RETURN_VOID(swap_chain_->QueryInterface(IID_PPV_ARGS(&swap_chain3)));
+	current_back_buffer_index_ = swap_chain3->GetCurrentBackBufferIndex();
+}
+
+
+bool D3D12SwapChain::acquireBackBuffers()
+{
+	std::array<std::unique_ptr<ITexture>, kBackBufferCount> back_buffers;
+	for (uint32_t i = 0; i < kBackBufferCount; i++)
 	{
-		current_back_buffer_index_ = swap_chain3->GetCurrentBackBufferIndex();
+		Microsoft::WRL::ComPtr<ID3D12Resource2> resource;
+		D3D12_ASSERT_RETURN(swap_chain_->GetBuffer(i, IID_PPV_ARGS(&resource)), false);
+
+		const D3D12_RESOURCE_DESC buffer_desc = resource->GetDesc();
+		ITexture::Desc texture_desc = {};
+		texture_desc.width = static_cast<uint32_t>(buffer_desc.Width);
+		texture_desc.height = buffer_desc.Height;
+		texture_desc.format = kBackBufferFormat;
+
+		back_buffers[i] = D3D12Texture::createBackBuffer(
+			static_cast<D3D12RenderDevice&>(render_device_), texture_desc, resource.Get());
+		ASSERT_MSG_RETURN(back_buffers[i] != nullptr, false, "Failed to create views for back buffer %u", i);
+		resource.Detach();
+		SET_RENDER_OBJECT_DEBUG_NAME(*back_buffers[i], "BackBuffer_{}", i);
 	}
+
+	back_buffers_ = std::move(back_buffers);
+	updateCurrentBackBufferIndex();
+	return true;
 }
 
 
 void D3D12SwapChain::setGpuDebugName()
 {
-}
-
-
-void D3D12SwapChain::resize(uint32_t width, uint32_t height)
-{
-	if (!swap_chain_ || width == 0 || height == 0)
-	{
-		return;
-	}
-
-	// Release old back buffers before resize
-	for (auto& back_buffer : back_buffers_)
-	{
-		back_buffer.reset();
-	}
-
-	// Resize buffers
-	D3D12_ASSERT_RETURN_VOID(swap_chain_->ResizeBuffers(
-		kBackBufferCount,
-		width,
-		height,
-		internal::translateTextureFormatToDxgiFormat(kBackBufferFormat),
-		0));
-
-	updateCurrentBackBufferIndex();
-
-	for (uint32_t i = 0; i < kBackBufferCount; i++)
-	{
-		ITexture::Desc texture_desc = {};
-		texture_desc.width = width;
-		texture_desc.height = height;
-		texture_desc.depth = 1;
-		texture_desc.mipCount = 1;
-		texture_desc.format = kBackBufferFormat;
-
-		ID3D12Resource2* resource = nullptr;
-		D3D12_ASSERT_RETURN_VOID(swap_chain_->GetBuffer(i, IID_PPV_ARGS(&resource)));
-		SET_D3D12_RESOURCE_DEBUG_NAME(resource, "BackBuffer_%u", i);
-
-		back_buffers_[i] = D3D12Texture::createBackBuffer(static_cast<D3D12RenderDevice&>(render_device_), texture_desc, resource);
-		ASSERT_MSG_RETURN_VOID(back_buffers_[i] != nullptr, "D3D12SwapChain: failed to recreate back buffer texture");
-	}
 }
 
 }  // namespace render

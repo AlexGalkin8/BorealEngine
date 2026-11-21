@@ -14,7 +14,6 @@ class Camera;
 namespace render {
 class IRenderDevice;
 class ICommandList;
-class ISwapChain;
 class IPipelineStateManager;
 class ITexture;
 class IBuffer;
@@ -43,6 +42,10 @@ public:
 	static std::unique_ptr<IRenderer> create(IRenderDevice& render_device, const RenderSettings& render_settings);
 
 	virtual void render(const scene::Scene& scene, const scene::Camera& camera, ITexture& output_target) = 0;
+
+	const RenderSettings& getRenderSettings() const { return render_settings_; }
+
+	virtual void resize(uint32_t width, uint32_t height) = 0;
 
 	virtual ~IRenderer();
 
