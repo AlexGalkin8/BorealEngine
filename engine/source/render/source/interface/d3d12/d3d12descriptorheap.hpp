@@ -1,8 +1,8 @@
 #pragma once
 
-#include <engine/core/utility/utility.h>
+#include "d3d12common.hpp"
 
-#include <d3d12.h>
+#include <engine/core/utility/utility.h>
 
 #include <cstdint>
 #include <queue>

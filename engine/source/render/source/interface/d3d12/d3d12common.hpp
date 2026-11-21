@@ -1,17 +1,21 @@
 #pragma once
 
+#include "interface/common.h"
+
+#include <windows.h>
 #include <d3d12.h>
+#include <d3d12shader.h>
 #include <dxgi1_6.h>
+#include <dxcapi.h>
+#include <wrl/client.h>
 
-// windows headers
-#include <wrl.h>
+#if defined(_DEBUG)
+#include <dxgidebug.h>
+#endif
 
-// std headers
 #include <cstdarg>
 #include <cstdio>
 #include <string>
-
-#include "interface/common.h"
 
 
 namespace render {
@@ -158,8 +162,6 @@ inline constexpr DXGI_FORMAT translateTextureFormatToDxgiFormat(ETextureFormat f
 }  // namespace internal
 
 #if _DEBUG
-
-#include <dxgidebug.h>
 
 namespace {
 inline void printLogImpl(const char* fmt, ...)

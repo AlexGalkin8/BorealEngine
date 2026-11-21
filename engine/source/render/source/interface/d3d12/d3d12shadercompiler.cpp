@@ -5,13 +5,6 @@
 
 #include <engine/core/utility/utility.h>
 
-#include <dxcapi.h>
-#include <wrl/client.h>
-
-#include <Windows.h>
-
-#include <d3d12shader.h>
-
 #include <vector>
 #include <filesystem>
 #include <fstream>
