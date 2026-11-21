@@ -1,6 +1,6 @@
 # 004 — Release renderer resources on shutdown
 
-Date: 2026-11-20. Status: manager ownership implemented; sample shutdown validation pending.
+Date: 2026-11-20. Status: complete. Sample shutdown verified by the user on 2026-11-21.
 Basis: the user confirmed correct model/base-color display and reported
 D3D12 LIVE_RESOURCE warning #575 with an external reference count of one on close.
 
@@ -38,8 +38,8 @@ partially initialized devices.
 
 ## Verification and limitations
 
-Follow-up: commit 5dc3d04 was undone at the user's request, retaining its changes
-in the working tree. No replacement commit is authorized yet.
+Commit 5dc3d04 was undone at the user's request. Commit 4f8ebbf contains the
+replacement implementation with centralized ownership and shutdown reporting.
 
 The user reported LIVE_DEVICE #274 with Refcount 2. The device-scoped report ran
 while device_ and its queried debug interface still held references, accounting
@@ -55,16 +55,13 @@ fails or the debugger stops, capture the stack and exit code before attributing
 the exception to a specific component.
 Reference: https://learn.microsoft.com/en-us/visualstudio/debugger/managing-exceptions-with-the-debugger
 
-Final Debug and Release x64 solution builds passed. Runtime shutdown output has not
-been captured, so absence of LIVE_RESOURCE warnings is not yet established.
-The logged address alone does not identify a particular allocation; the ownership
-leaks are confirmed from sources. Resize remains a separate M0 task.
-
-Manager rework verification: Debug and Release x64 solution builds passed. The
+Debug and Release x64 solution builds passed. The
 native D3D12 smoke check passed three device lifetimes with 81 buffers/21 textures
 each, including uploads and pointer stability after storage growth. Source and
 reproduction instructions: engine/tests/render. This did not capture debug output
-or exercise the full sample window shutdown. No commit was created.
+or exercise the full sample window shutdown.
 
-Next: run the updated Debug sample, close normally and inspect the live-object
-report. If resources remain, capture named allocations and the full report.
+On 2026-11-21 the user confirmed correct rendering and reported no D3D12 errors
+or live-object warnings in the sample Output. The MONZA exception notification
+still appears. This records the observed sample run. Resize and early resource
+retirement remain separate M0 work.
