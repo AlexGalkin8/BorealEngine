@@ -3,15 +3,15 @@
 ## Main development chat
 
 Own planning, architecture, implementation, integration and Git preparation. Create
-each commit only with explicit user approval under the agents/AGENTS.md rules. This is
+each commit only with explicit user approval under the agent/AGENTS.md rules. This is
 the primary coordinator. Update relevant task documents with scope, commit IDs,
-checks and remaining limitations. Keep shader responsibilities from agents/AGENTS.md.
+checks and remaining limitations. Keep shader responsibilities from agent/AGENTS.md.
 Request independent review against a specific commit/range or clearly identified
 working-tree snapshot. Do not treat unreviewed work as reviewed.
 
 ## Independent review chat
 
-Inspect agents/AGENTS.md, the relevant task, actual diff and owning code independently.
+Inspect agent/AGENTS.md, the relevant task, actual diff and owning code independently.
 Do not rely on the author's summary as proof of correctness. Prioritize actionable
 defects, triggering scenarios, regressions, resource lifetime and synchronization.
 Report severity, file/symbol, consequence and evidence; separate hypotheses and

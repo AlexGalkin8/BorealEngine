@@ -56,11 +56,11 @@ code when required by the current task.
 ## Project materials
 
 Three dedicated chats handle development, independent review and devlog/X publishing.
-Follow [ChatWorkflow](../agent/ChatWorkflow.md) for responsibilities and handoffs.
+Follow [ChatWorkflow](ChatWorkflow.md) for responsibilities and handoffs.
 
-Start with [agent/README.md](../agent/README.md).
-- For planning and architecture, consult [ProjectBrief](../agent/ProjectBrief.md)
-  and [Roadmap](../agent/Roadmap.md).
+Start with [agent/README.md](README.md).
+- For planning and architecture, consult [ProjectBrief](ProjectBrief.md)
+  and [Roadmap](Roadmap.md).
 - Read only relevant tasks, decisions and reviews; do not load the entire archive.
 - Keep durable rules here, goals and open questions in ProjectBrief, milestones in
   Roadmap and architectural rationale in decisions.
@@ -72,13 +72,13 @@ Start with [agent/README.md](../agent/README.md).
 
 ## Architecture and code
 
-- Read [CppStyle](../agent/CppStyle.md) before C++ changes. Preserve local conventions
+- Read [CppStyle](CppStyle.md) before C++ changes. Preserve local conventions
   and module boundaries; do not reformat unrelated code.
 - Separate CPU asset import, GPU resource ownership and command recording.
   Avoid repeated asset reads inside drawing passes.
 - GPU resources are owned centrally by a GPU resource manager, not by renderers
   or RenderMesh objects. Consumers use non-owning handles/references. See
-  [resource ownership](../agent/decisions/003-resource-ownership.md). unique_ptr
+  [resource ownership](decisions/003-resource-ownership.md). unique_ptr
   is appropriate inside the owner; do not transfer ownership to consumers to fix leaks.
 - Make ownership explicit. Resource, descriptor and upload memory reclamation or
   reuse must respect completion of GPU work.

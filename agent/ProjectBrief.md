@@ -40,7 +40,7 @@ Define a reference scene and quality settings before validating performance.
 - The agent prepares Git changes, but each commit requires explicit user approval.
 - Store project context in the repository. New directories use lowercase.
 - Comments, commit messages and documentation are in English; conversation is in Russian.
-  Durable instructions are in agents/AGENTS.md.
+  Durable instructions are in agent/AGENTS.md.
 
 ## Technical starting point
 

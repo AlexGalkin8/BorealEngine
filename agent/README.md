@@ -1,8 +1,8 @@
 # BorealEngine project materials
 
-Durable instructions live in [agents/AGENTS.md](../agents/AGENTS.md).
+Durable instructions live in [agent/AGENTS.md](AGENTS.md).
 This location is not the repository-root discovery entry point. For a new chat,
-explicitly ask the agent to read agents/AGENTS.md before starting work.
+explicitly ask the agent to read agent/AGENTS.md before starting work.
 This directory preserves project context and substantial task results across chats.
 It does not contain automatically launched agents. Write all materials in English.
 
@@ -18,7 +18,7 @@ It does not contain automatically launched agents. Write all materials in Englis
 
 ## Workflow
 
-1. Read agents/AGENTS.md and the current request.
+1. Read agent/AGENTS.md and the current request.
 2. For planning, read ProjectBrief and Roadmap. For local changes, read only the
    relevant task, decisions and sources.
 3. Verify historical statements against current code and git diff. Old reports
@@ -31,11 +31,11 @@ in agent profiles. Add skills and test workflows when recurring needs emerge.
 
 ## Where rules belong
 
-- General development, naming and language rules: `agents/AGENTS.md`.
+- General development, naming and language rules: `agent/AGENTS.md`.
 - Subsystem-specific rules: a nested `AGENTS.md` near that subsystem when needed;
   do not copy general rules.
 - Product goals/constraints: ProjectBrief.
 - Architectural rationale: decisions.
 - Single-task constraints: its document or the current request.
 
-New directory names must be lowercase, as required by agents/AGENTS.md.
+New directory names must be lowercase, as required by agent/AGENTS.md.
