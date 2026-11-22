@@ -12,9 +12,15 @@
     <ClInclude Include="..\..\include\engine\engine.h">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\engine\commandlinehandler.h">
+      <Filter>include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\engine.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="source\commandlinehandler.cpp">
       <Filter>source</Filter>
     </ClCompile>
     <ClCompile Include="source\settings.cpp" />

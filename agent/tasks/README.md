@@ -10,7 +10,8 @@
 | [006 — engine logging](006-engine-logging.md) | Implemented. Release resize diagnostics verified. |
 | [007 — depth prepass](007-depth-prepass.md) | Implemented for opaque meshes. Resize, GPU readback and D3D12 validation passed. |
 | [008 — command-line arguments](008-command-line-arguments.md) | Implemented. Parser and sample startup verified. |
-| [009 — RenderDoc launch](009-renderdoc-launch.md) | Planned. Depends on command-line argument handling. |
+| [009 — RenderDoc capture](009-renderdoc-launch.md) | In-process capture and pass order verified. |
+| [010 — refactor capture-tool startup](010-capture-tool-refactor.md) | Planned. |
 
 Document substantial tasks that benefit from continuity across chats, not every
 minor edit. File name: `NNN-short-topic.md`. Keep the table current.

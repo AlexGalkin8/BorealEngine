@@ -31,10 +31,10 @@ argument handling is marked as TODO.
 
 ## Implementation
 
-The sample constructs `CommandLineHandler` from the Windows argument vector and
-consumes `--settings <path>` before calling `Engine::create`. With no option,
-it uses `data/settings.json`. The engine factory receives only the selected
-settings path.
+The sample calls `Engine::create()`, which reads the process arguments through
+`engine::CommandLineHandler::fromProcess()` and parses them into
+`CommandLineHandler::StartupOptions` before initializing the engine.
+The default settings file is `data/settings.json`.
 
 Flags and options are consumed before `--`. Repeated flags are consumed
 together, and duplicate value options are reported. Arguments left after

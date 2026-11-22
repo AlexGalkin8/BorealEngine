@@ -29,9 +29,6 @@
     <ClInclude Include="..\..\include\engine\core\utility\assert.h">
       <Filter>include\utility</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\engine\core\utility\commandlinehandler.h">
-      <Filter>include\utility</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\include\engine\core\utility\utility.h">
       <Filter>include\utility</Filter>
     </ClInclude>
@@ -49,9 +46,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="source\commandlinehandler.cpp">
-      <Filter>source\utility</Filter>
-    </ClCompile>
     <ClCompile Include="source\utility.cpp">
       <Filter>source\utility</Filter>
     </ClCompile>

@@ -77,6 +77,10 @@ The executable is built under `samples/BorealSample1/build/bin/x64/<Configuratio
 
 The sample reads `data/settings.json`, which selects the scene and input configuration. The default scene is `data/scenes/default_scene/default_scene.json`; its model names resolve under `data/scenes/default_scene/models/`. Keep referenced model files and their external resources available.
 
+### Tools
+
+See the [tools guide](docs/tools.md) for command-line commands and GPU capture.
+
 ### Camera controls
 
 | Action | Default input |
@@ -106,7 +110,7 @@ Movement bindings, speed, sprint multiplier, and mouse sensitivity are configure
 ```text
 BorealEngine/
 ├── agent/                      Project goals, decisions, tasks, and devlog
-├── docs/images/                Saved screenshots
+├── docs/                       Usage guides and saved screenshots
 ├── engine/
 │   ├── BorealEngine.slnx       Main Visual Studio solution
 │   ├── include/engine/         Public headers

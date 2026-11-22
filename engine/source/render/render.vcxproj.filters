@@ -96,6 +96,9 @@
     <ClInclude Include="..\..\include\engine\render\interface\renderdevice.h">
       <Filter>include\interface</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\engine\render\interface\gpuframecapturer.h">
+      <Filter>include\interface</Filter>
+    </ClInclude>
     <ClInclude Include="source\interface\d3d12\d3d12commandlist.hpp">
       <Filter>source\interface\d3d12</Filter>
     </ClInclude>
@@ -114,6 +117,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\deferredrenderer.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="source\renderdoccapturer.cpp">
       <Filter>source</Filter>
     </ClCompile>
     <ClCompile Include="source\renderer.cpp">

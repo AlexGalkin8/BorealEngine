@@ -1,5 +1,7 @@
 #include "engine.h"
 
+#include "commandlinehandler.h"
+
 #include <engine/core/utility/assert.h>
 #include <engine/platform/window.h>
 #include <engine/platform/input.h>
@@ -12,8 +14,30 @@
 #include <engine/render/renderer.h>
 #include <engine/scene/common.h>
 
+#include <utility>
+
+
+std::unique_ptr<Engine> Engine::create()
+{
+	const engine::CommandLineHandler command_line = engine::CommandLineHandler::fromProcess();
+	engine::CommandLineHandler::StartupOptions options;
+	if (!command_line.handleCommandLine(options))
+	{
+		return nullptr;
+	}
+
+	return create(utility::translateWStringToString(options.settings_file_path), options.frame_capture);
+}
+
 
 std::unique_ptr<Engine> Engine::create(const std::string& settings_file_name)
+{
+	return create(settings_file_name, {});
+}
+
+
+std::unique_ptr<Engine> Engine::create(const std::string& settings_file_name,
+	const render::FrameCaptureSettings& frame_capture)
 {
 	std::unique_ptr<Engine> engine = std::unique_ptr<Engine>(new Engine());
 
@@ -22,6 +46,7 @@ std::unique_ptr<Engine> Engine::create(const std::string& settings_file_name)
 
 	render::IRenderDevice::CreationDesc render_device_desc = {};
 	render_device_desc.enable_debug_validation_layer = false;
+	render_device_desc.frame_capture = frame_capture;
 
 	engine->render_device_ = render::IRenderDevice::create<render::ERenderAPI::kD3D12>(render_device_desc);
 	ASSERT_MSG_RETURN_NULL(engine->render_device_ != nullptr, "Failed to create render device");
@@ -222,7 +247,8 @@ void Engine::frame()
 		return;
 	}
 
+	render_device_->beginFrameCapture();
 	renderer_->render(*current_scene_, current_scene_->getCamera(), swap_chain_->getCurrentBackBuffer());
-
 	swap_chain_->present();
+	render_device_->endFrameCapture();
 }

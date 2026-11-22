@@ -20,6 +20,7 @@ class ResourceManager;
 }  // namespace scene
 
 namespace render {
+struct FrameCaptureSettings;
 class IRenderDevice;
 class IRenderer;
 class ISwapChain;
@@ -29,7 +30,10 @@ class ISwapChain;
 class Engine : public utility::NonCopyable
 {
 public:
+	static std::unique_ptr<Engine> create();
 	static std::unique_ptr<Engine> create(const std::string& settings_file_name);
+	static std::unique_ptr<Engine> create(const std::string& settings_file_name,
+		const render::FrameCaptureSettings& frame_capture);
 
 	void run();
 

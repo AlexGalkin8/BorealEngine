@@ -4,6 +4,7 @@
 
 #include "texture.h"
 #include "buffer.h"
+#include "gpuframecapturer.h"
 
 #include <cstdint>
 #include <memory>
@@ -35,6 +36,7 @@ public:
 	struct CreationDesc
 	{
 		bool enable_debug_validation_layer = true;
+		FrameCaptureSettings frame_capture;
 	};
 
 public:
@@ -55,6 +57,10 @@ public:
 	// GPU synchronization
 	virtual void waitGpuIdle() = 0;
 
+	void requestFrameCapture();
+	void beginFrameCapture();
+	void endFrameCapture();
+
 	virtual ~IRenderDevice();
 
 protected:
@@ -68,6 +74,9 @@ protected:
 	Info render_info_;
 	std::unique_ptr<GpuResourceManager> resource_manager_;
 	std::unique_ptr<IPipelineStateManager> pipeline_state_manager_;
+
+private:
+	std::unique_ptr<IGpuFrameCapturer> frame_capturer_;
 };
 
 }  // namespace render

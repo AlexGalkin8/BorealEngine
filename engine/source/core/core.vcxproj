@@ -87,13 +87,11 @@
     <ClInclude Include="..\..\include\engine\core\asset\gltfloader.h" />
     <ClInclude Include="..\..\include\engine\core\time\time.h" />
     <ClInclude Include="..\..\include\engine\core\utility\assert.h" />
-    <ClInclude Include="..\..\include\engine\core\utility\commandlinehandler.h" />
     <ClInclude Include="..\..\include\engine\core\utility\enum.h" />
     <ClInclude Include="..\..\include\engine\core\utility\log.h" />
     <ClInclude Include="..\..\include\engine\core\utility\utility.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="source\commandlinehandler.cpp" />
     <ClCompile Include="source\enum.cpp" />
     <ClCompile Include="source\gltfloader.cpp" />
     <ClCompile Include="source\log.cpp" />
