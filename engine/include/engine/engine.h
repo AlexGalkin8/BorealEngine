@@ -29,7 +29,7 @@ class ISwapChain;
 class Engine : public utility::NonCopyable
 {
 public:
-	static std::unique_ptr<Engine> create(const std::string& settings_file_name, std::vector<std::wstring>&& cmd_args = {});
+	static std::unique_ptr<Engine> create(const std::string& settings_file_name);
 
 	void run();
 

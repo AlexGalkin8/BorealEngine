@@ -13,10 +13,8 @@
 #include <engine/scene/common.h>
 
 
-std::unique_ptr<Engine> Engine::create(const std::string& settings_file_name, std::vector<std::wstring>&& cmd_args)
+std::unique_ptr<Engine> Engine::create(const std::string& settings_file_name)
 {
-	// TODO handling cmd_args
-
 	std::unique_ptr<Engine> engine = std::unique_ptr<Engine>(new Engine());
 
 	engine->settings_ = engine::loadSettingsFromFile(settings_file_name);

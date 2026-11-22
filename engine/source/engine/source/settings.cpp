@@ -1,5 +1,6 @@
 #include <engine/settings.h>
 
+#include <filesystem>
 #include <fstream>
 #include <sstream>
 #include <string_view>
@@ -8,7 +9,8 @@ namespace {
 
 static std::string readTextFile(const std::string& path)
 {
-	std::ifstream file(path, std::ios::in | std::ios::binary);
+	const std::filesystem::path file_path(std::u8string(path.begin(), path.end()));
+	std::ifstream file(file_path, std::ios::in | std::ios::binary);
 	if (!file)
 	{
 		return {};
