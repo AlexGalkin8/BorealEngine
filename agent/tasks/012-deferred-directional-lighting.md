@@ -1,9 +1,9 @@
 # 012 — Deferred directional lighting
 
 - Date: 2026-11-22
-- Status: proposed
+- Status: in progress. C++ integration is staged behind a local renderer switch.
 - Related roadmap milestone: M3. Deferred lighting
-- Authorization: planning and task draft
+- Authorization: continue development under the agreed plan
 
 ## Outcome and scope
 
@@ -54,6 +54,27 @@ The current D3D12 depth allocation creates only a DSV.
 5. The project author writes the HLSL. The development chat handles C++/RHI
    integration and assists with the shader contract, debugging, and review.
 
+## Shader handoff
+
+Both shaders use the existing `vertexShader` and `pixelShader` entry points
+and the fullscreen triangle from `gbuffer_base_color.hlsl`. Use integer
+`SV_Position.xy` with `Load(..., mip 0)` for all texture reads.
+
+| File | Shader inputs | Output |
+|---|---|---|
+| `engine/shaders/deferred_lighting.hlsl` | `t0` albedo and coverage, `t1` signed world normal, `b0` directional light constants | Linear RGB and the original coverage in `SceneLightingHDR`. |
+| `engine/shaders/lighting_preview.hlsl` | `t0` linear HDR with coverage in alpha | Clamp linear RGB to [0, 1] and apply the sRGB transfer used by the albedo preview. Write black for zero coverage. |
+
+`b0` contains eight 32-bit floats: direction toward the light in XYZ and one
+padding float, then RGB light gain and one padding float. The reference
+direction is `(0.36, 0.48, -0.8)` and the gain is `(2, 2, 2)`.
+The lighting pixel shader should preserve coverage for dark geometry. Before
+normalization, check for a zero normal and output black in that case.
+
+Set `kEnableDeferredLighting` in `deferredrenderer.cpp` to `true` once both
+shader files are ready. The disabled path retains the existing albedo preview
+and allocates only the prepass and G-buffer targets.
+
 ## Acceptance criteria
 
 - On a flat reference surface, compare interior HDR pixels against the diffuse
@@ -78,7 +99,12 @@ The current D3D12 depth allocation creates only a DSV.
 
 ## Verification
 
-Current status — source inspection only. The checks below are pending.
+With lighting disabled, Debug and Release x64 built using a temporary
+debug-information override for the local MSPDB issue. Debug passed resize and
+RenderDoc capture smoke checks. GPU readback confirmed visible albedo at
+1280×720 and 960×540 with no GPU-based validation errors.
+
+Lighting-path checks below are pending the two HLSL files.
 
 1. Build Debug and Release x64. Start the Debug sample from
    `samples/BorealSample1` with

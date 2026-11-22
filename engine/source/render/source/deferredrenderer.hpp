@@ -87,7 +87,8 @@ private:
 	using StaticMeshBucket = std::vector<StaticMeshDraw>;
 	void depthPrepass(const StaticMeshBucket& bucket, ITexture& depth_texture);
 	void gBufferPass(const StaticMeshBucket& bucket, ITexture& depth_texture);
-	void showBaseColor(ITexture& output_target);
+	void deferredLightingPass();
+	void previewPass(ITexture& output_target);
 	void drawStaticMeshes(ICommandList& command_list, const StaticMeshBucket& bucket, bool bind_material) const;
 	StaticMeshBucket buildStaticMeshBucket(const scene::Scene& scene, const scene::Camera& camera);
 	const RenderMesh* getOrCreateRenderMesh(const scene::MeshHandle& mesh);
@@ -95,11 +96,13 @@ private:
 private:
 	IPipelineState* depth_prepass_pipeline_state_ = nullptr;
 	IPipelineState* gbuffer_pipeline_state_ = nullptr;
-	IPipelineState* show_base_color_pipeline_state_ = nullptr;
+	IPipelineState* deferred_lighting_pipeline_state_ = nullptr;
+	IPipelineState* preview_pipeline_state_ = nullptr;
 
 	ITexture* depth_texture_ = nullptr;
 	ITexture* gbuffer_base_color_ = nullptr;
 	ITexture* gbuffer_normal_ = nullptr;
+	ITexture* scene_lighting_hdr_ = nullptr;
 	ITexture* default_white_texture_ = nullptr;
 
 	std::unordered_map<std::string, RenderMesh> render_meshes_;

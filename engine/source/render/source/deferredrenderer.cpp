@@ -22,6 +22,29 @@ namespace render {
 
 static constexpr ETextureFormat kGBufferBaseColorFormat = ETextureFormat::kRGBA8_Unorm_Srgb;
 static constexpr ETextureFormat kGBufferNormalFormat = ETextureFormat::kRGBA16_Float;
+static constexpr ETextureFormat kSceneLightingFormat = ETextureFormat::kRGBA16_Float;
+// Enable after both lighting shaders are available.
+static constexpr bool kEnableDeferredLighting = false;
+
+struct DirectionalLightConstants
+{
+	float direction_to_light[3];
+	float direction_padding;
+	float light_gain[3];
+	float gain_padding;
+};
+
+static_assert(sizeof(DirectionalLightConstants) == 8 * sizeof(uint32_t));
+
+
+static void setFullscreenViewport(ICommandList& command_list, const ITexture& target)
+{
+	const uint32_t width = target.getWidth();
+	const uint32_t height = target.getHeight();
+	command_list.setViewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height));
+	command_list.setScissorRect(0, 0, static_cast<int32_t>(width), static_cast<int32_t>(height));
+	command_list.setPrimitiveTopology(EPrimitiveTopology::kTriangle);
+}
 
 
 static IBuffer* createDebugTriangleVertexBuffer(IRenderDevice& render_device)
@@ -143,7 +166,11 @@ void DeferredRenderer::render(const scene::Scene& scene, const scene::Camera& ca
 	const StaticMeshBucket bucket = buildStaticMeshBucket(scene, camera);
 	depthPrepass(bucket, depth_texture);
 	gBufferPass(bucket, depth_texture);
-	showBaseColor(output_target);
+	if constexpr (kEnableDeferredLighting)
+	{
+		deferredLightingPass();
+	}
+	previewPass(output_target);
 	render_device_.executeCommandLists(ECommandListType::kDirect);
 }
 
@@ -205,13 +232,16 @@ void DeferredRenderer::initResizableTextures(uint32_t width, uint32_t height)
 {
 	GpuResourceManager& resource_manager = render_device_.getResourceManager();
 
-	constexpr std::array<ETextureFormat, 3> formats = { ETextureFormat::D32_Float, kGBufferBaseColorFormat, kGBufferNormalFormat };
-	const std::array<ITexture**, formats.size()> targets = { &depth_texture_, &gbuffer_base_color_, &gbuffer_normal_ };
+	constexpr std::array<ETextureFormat, 4> formats = {
+		ETextureFormat::D32_Float, kGBufferBaseColorFormat, kGBufferNormalFormat, kSceneLightingFormat };
+	const std::array<ITexture**, formats.size()> targets = {
+		&depth_texture_, &gbuffer_base_color_, &gbuffer_normal_, &scene_lighting_hdr_ };
+	constexpr size_t target_count = kEnableDeferredLighting ? formats.size() : formats.size() - 1;
 	std::array<ITexture*, formats.size()> replacements = {};
 	ITexture::Desc desc = {};
 	desc.width = width;
 	desc.height = height;
-	for (size_t index = 0; index < formats.size(); ++index)
+	for (size_t index = 0; index < target_count; ++index)
 	{
 		desc.format = formats[index];
 		desc.render_target = index != 0;
@@ -229,7 +259,11 @@ void DeferredRenderer::initResizableTextures(uint32_t width, uint32_t height)
 	SET_RENDER_OBJECT_DEBUG_NAME(*replacements[0], "DepthPrepassDepth");
 	SET_RENDER_OBJECT_DEBUG_NAME(*replacements[1], "GBufferAlbedo");
 	SET_RENDER_OBJECT_DEBUG_NAME(*replacements[2], "GBufferWorldNormal");
-	for (size_t index = 0; index < targets.size(); ++index)
+	if constexpr (kEnableDeferredLighting)
+	{
+		SET_RENDER_OBJECT_DEBUG_NAME(*replacements[3], "SceneLightingHDR");
+	}
+	for (size_t index = 0; index < target_count; ++index)
 	{
 		ITexture*& target = *targets[index];
 		if (target)
@@ -270,12 +304,24 @@ void DeferredRenderer::initPipelineStates()
 	gbuffer_pipeline_state_ = &pipeline_state_manager_.createPipelineState(gbuffer_desc);
 
 	GraphicsPipelineDesc preview_desc = {};
-	preview_desc.shader_state.shader_name = "gbuffer_base_color";
+	preview_desc.shader_state.shader_name = kEnableDeferredLighting ? "lighting_preview" : "gbuffer_base_color";
 	preview_desc.resource_layout_state[0] = RootParameter::makeDescriptorTable({ DescriptorRange{ DescriptorType::kSRV, 0, 1 } });
 	preview_desc.output_merger_state.addRenderTarget(ETextureFormat::kRGBA8_Unorm);
 	preview_desc.output_merger_state.depth_stencil.depth_enable = false;
 	preview_desc.output_merger_state.depth_stencil.depth_write = false;
-	show_base_color_pipeline_state_ = &pipeline_state_manager_.createPipelineState(preview_desc);
+	preview_pipeline_state_ = &pipeline_state_manager_.createPipelineState(preview_desc);
+
+	if constexpr (kEnableDeferredLighting)
+	{
+		GraphicsPipelineDesc lighting_desc = {};
+		lighting_desc.shader_state.shader_name = "deferred_lighting";
+		lighting_desc.resource_layout_state[0] = RootParameter::makeDescriptorTable({ DescriptorRange{ DescriptorType::kSRV, 0, 2 } });
+		lighting_desc.resource_layout_state[1] = RootParameter::makeConstants32Bits(0, 8, 0);
+		lighting_desc.output_merger_state.addRenderTarget(kSceneLightingFormat);
+		lighting_desc.output_merger_state.depth_stencil.depth_enable = false;
+		lighting_desc.output_merger_state.depth_stencil.depth_write = false;
+		deferred_lighting_pipeline_state_ = &pipeline_state_manager_.createPipelineState(lighting_desc);
+	}
 }
 
 
@@ -307,16 +353,37 @@ void DeferredRenderer::gBufferPass(const StaticMeshBucket& bucket, ITexture& dep
 }
 
 
-void DeferredRenderer::showBaseColor(ITexture& output_target)
+void DeferredRenderer::deferredLightingPass()
 {
-	ICommandList& command_list = render_device_.acquireCommandList(ECommandListType::kDirect, "GBufferBaseColorPreview");
+	static constexpr DirectionalLightConstants kLight = {
+		{ 0.36f, 0.48f, -0.8f }, 0.0f,
+		{ 2.0f, 2.0f, 2.0f }, 0.0f,
+	};
+
+	ITexture& lighting_target = *scene_lighting_hdr_;
+	ICommandList& command_list = render_device_.acquireCommandList(ECommandListType::kDirect, "DeferredLighting");
+	command_list.transitionTexture(lighting_target, EResourceState::kShaderResource, EResourceState::kRenderTarget);
+	command_list.setRenderTarget(lighting_target);
+	command_list.setPipelineState(*deferred_lighting_pipeline_state_);
+	setFullscreenViewport(command_list, lighting_target);
+	command_list.setDescriptorSet(0, { DescriptorResource::textureSRV(gbuffer_base_color_),
+		DescriptorResource::textureSRV(gbuffer_normal_) });
+	command_list.setGraphicsRoot32BitConstants(1, 8, &kLight);
+	command_list.draw(3, 0);
+	command_list.transitionTexture(lighting_target, EResourceState::kRenderTarget, EResourceState::kShaderResource);
+	render_device_.submitCommandList(command_list);
+}
+
+
+void DeferredRenderer::previewPass(ITexture& output_target)
+{
+	ICommandList& command_list = render_device_.acquireCommandList(ECommandListType::kDirect,
+		kEnableDeferredLighting ? "LightingPreview" : "GBufferBaseColorPreview");
 	command_list.transitionTexture(output_target, EResourceState::kPresent, EResourceState::kRenderTarget);
 	command_list.setRenderTarget(output_target);
-	command_list.setPipelineState(*show_base_color_pipeline_state_);
-	command_list.setViewport(0.0f, 0.0f, static_cast<float>(output_target.getWidth()), static_cast<float>(output_target.getHeight()));
-	command_list.setScissorRect(0, 0, static_cast<int32_t>(output_target.getWidth()), static_cast<int32_t>(output_target.getHeight()));
-	command_list.setPrimitiveTopology(EPrimitiveTopology::kTriangle);
-	command_list.setDescriptorSet(0, { DescriptorResource::textureSRV(gbuffer_base_color_) });
+	command_list.setPipelineState(*preview_pipeline_state_);
+	setFullscreenViewport(command_list, output_target);
+	command_list.setDescriptorSet(0, { DescriptorResource::textureSRV(kEnableDeferredLighting ? scene_lighting_hdr_ : gbuffer_base_color_) });
 	command_list.draw(3, 0);
 	command_list.transitionTexture(output_target, EResourceState::kRenderTarget, EResourceState::kPresent);
 	render_device_.submitCommandList(command_list);
