@@ -1,0 +1,119 @@
+# 012 — Deferred directional lighting
+
+- Date: 2026-11-22
+- Status: proposed
+- Related roadmap milestone: M3. Deferred lighting
+- Authorization: planning and task draft
+
+## Outcome and scope
+
+Render the existing opaque scene with one world-space directional light. Record
+one fullscreen lighting draw into a linear HDR target, then show it through a
+temporary SDR preview. Use the existing direct queue and fullscreen triangle
+pattern. Schedule depth sampling and position reconstruction with the first
+position-dependent effect. Point lights, shadows, PBR material channels, and the
+postprocessing chain have separate scope.
+
+## Starting point
+
+[Task 011](011-gbuffer-pass.md) and commit `73f912a` provide the opaque depth
+prepass, a two-target G-buffer, and an albedo preview. Both color targets already
+have SRVs and transition back to shader-resource state after the G-buffer pass.
+The depth resource is a `D32_FLOAT` DSV with a clear value of 1. The G-buffer
+uses the same depth attachment with an EQUAL test and depth writes disabled.
+The current D3D12 depth allocation creates only a DSV.
+
+| Resource | Format | Contract |
+|---|---|---|
+| `GBufferAlbedo` | `RGBA8_UNORM_SRGB` | The SRV returns linear RGB. Alpha is 0 on the clear and 1 for covered opaque pixels. |
+| `GBufferWorldNormal` | `RGBA16_FLOAT` | Signed world-space normal in RGB, including the glTF normal-map result. |
+| `SceneLightingHDR` (new) | `RGBA16_FLOAT` | Linear lit RGB, with values above 1 preserved. Alpha carries opaque coverage. |
+| Back buffer | `RGBA8_UNORM` | The preview clamps linear RGB to [0, 1] and applies the existing sRGB transfer function once. |
+
+## Plan
+
+1. Define the shader bindings and reference light. Use an SRV table for albedo
+   and normals and per-pass constants for a normalized world-space vector
+   pointing **toward** the light and an RGB linear light gain. Set the light
+   in the renderer for this task.
+2. Add `SceneLightingHDR` through the existing GPU resource manager. Allocate it
+   with the depth and G-buffer replacements before publishing the resized set.
+   Reuse the engine's GPU-idle resize path and preserve its allocation failure
+   behavior. Name the resource and the two new command lists for captures.
+3. Record `DeferredLighting` after `GBufferPass`. Bind the HDR RTV with depth
+   testing and blending disabled. Load mip 0 at the integer pixel coordinates
+   derived from `SV_Position`. For covered pixels with a nonzero normal, use
+   `albedo * lightGain * max(dot(normalize(N), L), 0)`. The light gain folds in
+   the constant diffuse scale. Write black for background or a zero normal,
+   preserving coverage in alpha. Transition HDR from shader resource to render
+   target before the draw and back to shader resource before the preview.
+4. Replace the main-path albedo preview with `LightingPreview`. Read the HDR
+   SRV and write every pixel to the UNORM back buffer. Reuse the existing
+   present-to-RTV-to-present sequence. M4 can consume the same linear HDR SRV
+   for exposure and tone mapping.
+5. The project author writes the HLSL. The development chat handles C++/RHI
+   integration and assists with the shader contract, debugging, and review.
+
+## Acceptance criteria
+
+- On a flat reference surface, compare interior HDR pixels against the diffuse
+  equation using the actual bound light constants and G-buffer values. A white
+  texel with an aligned normal and gain 2 produces RGB 2 in HDR. Perpendicular
+  and opposite normals produce RGB 0. Compare with floating-point tolerance
+  and check that the coverage mask distinguishes unlit geometry from background.
+- On the default `pudge.glb` scene, a fixed camera and an oblique light produce
+  corresponding changes in the normal and HDR targets when normal maps are
+  disabled. Use a controlled test variant or a temporary zero normal scale.
+- At 1920×1080 and after a resize to a different aspect ratio and back, the
+  depth, G-buffer, HDR target, viewport, scissor, and back buffer agree in size.
+  A frame with no opaque draws shows black with zero HDR coverage. Consecutive
+  frames and resize pass D3D12 debug-layer and GPU-based validation.
+- Record a Release performance baseline at 1920×1080 using a fixed scene and
+  camera. Report lighting and preview GPU time, total GPU frame time, and CPU
+  frame time over a warmed-up run. Record hardware, driver, scene, resolution,
+  frame sample count, and presentation settings. Compare the median and 95th
+  percentile with the project target of 16.67 ms per frame. Record the actual
+  hardware and mark target-hardware validation pending if it is unavailable.
+  Set pass budgets after measuring the baseline.
+
+## Verification
+
+Current status — source inspection only. The checks below are pending.
+
+1. Build Debug and Release x64. Start the Debug sample from
+   `samples/BorealSample1` with
+   `--tool renderdoc open-capture-tool capture --settings <settings-path>`.
+   Set the window size in the capture settings and confirm the actual target
+   size in RenderDoc. For a capture after a resize, use
+   `--tool renderdoc open-capture-tool live` and trigger it after the new size
+   has settled. See the [capture guide](../../docs/gpu-capture-tools.md).
+2. In the Event Browser, verify the sequence
+   `DepthPrepass → GBufferPass → DeferredLighting → LightingPreview → Present`.
+   In Pipeline State, verify the lighting draw has three vertices, the
+   expected two PS SRVs, light constants, an HDR RTV, and no DSV. Verify that
+   the preview reads the same HDR resource. Inspect resource barriers in the
+   API calls. [RenderDoc Event Browser](https://github.com/baldurk/renderdoc/blob/v1.x/docs/window/event_browser.rst)
+3. Use Texture Viewer at the relevant draw events to compare albedo, signed
+   normal values, HDR and the back buffer at matching pixel coordinates.
+   Inspect raw HDR values above 1 and confirm that only the preview clips them.
+   Save the capture, revision, and representative pixel coordinates and values.
+4. Use RenderDoc action durations to identify expensive draws during replay.
+   Measure the steady-state frame budget outside capture and GPU-based
+   validation, using direct-queue timestamps or a GPU profiler. Include the
+   barriers in pass-level measurements where possible, and account for
+   presentation waits when interpreting CPU frame times.
+
+## Limitations and continuation
+
+At 1080p the single HDR target holds about 15.82 MiB of texel data before
+allocation overhead. Its full-screen write and the preview read add bandwidth.
+Measure both passes before changing the G-buffer formats.
+
+For the first position-dependent light or effect, reuse the existing depth
+allocation with a typeless `R32_TYPELESS` resource, a `D32_FLOAT` DSV and an
+`R32_FLOAT` SRV. Plan explicit states for the prepass, the read-only depth test,
+and the shader read. Reconstruct world position with the inverse of the same
+view-projection matrix used to fill the depth, using D3D depth in [0, 1],
+pixel-center coordinates, viewport Y inversion and a homogeneous divide.
+Validate by reprojecting known points after a camera move and resize.
+[D3D12 resource states](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_resource_states)
