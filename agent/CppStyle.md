@@ -61,6 +61,10 @@ conventions and do not rewrite the project solely for consistency.
 
 ## Language and API patterns
 
+- Prefer a static `create()` member on the type or interface as the public
+  entry point for object creation, especially when initialization can fail or
+  selects a backend. Use constructors and aggregate initialization for simple
+  value types.
 - Use the existing C++20 baseline, standard containers, `nullptr`, `enum class`,
   `override`, `final` and `= default` where semantically appropriate.
 - Small data/descriptor types are structs with public fields and default values;
