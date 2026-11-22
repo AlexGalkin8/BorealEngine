@@ -118,22 +118,31 @@ void D3D12CommandList::transitionTexture(ITexture& texture, EResourceState from,
 
 void D3D12CommandList::setRenderTarget(ITexture& render_target, ITexture* depth_stencil)
 {
-	D3D12Texture& d3d12_texture = static_cast<D3D12Texture&>(render_target);
-	ASSERT_MSG_RETURN_VOID(d3d12_texture.hasRtv(), "Render target texture has no RTV descriptor");
+	setRenderTargets({ &render_target }, depth_stencil);
+}
 
-	D3D12_CPU_DESCRIPTOR_HANDLE rtv_handle = d3d12_texture.getRtvHandle();
 
-	if (depth_stencil != nullptr)
+void D3D12CommandList::setRenderTargets(std::initializer_list<ITexture*> render_targets, ITexture* depth_stencil)
+{
+	ASSERT_MSG_RETURN_VOID(render_targets.size() <= D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT, "Too many render targets");
+	D3D12_CPU_DESCRIPTOR_HANDLE rtv_handles[D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT] = {};
+	UINT count = 0;
+	for (ITexture* render_target : render_targets)
 	{
-		D3D12Texture& d3d12_depth_texture = static_cast<D3D12Texture&>(*depth_stencil);
-		ASSERT_MSG_RETURN_VOID(d3d12_depth_texture.hasDsv(), "Depth texture has no DSV descriptor");
-
-		D3D12_CPU_DESCRIPTOR_HANDLE dsv_handle = d3d12_depth_texture.getDsvHandle();
-		command_list_->OMSetRenderTargets(1, &rtv_handle, FALSE, &dsv_handle);
-		return;
+		ASSERT_MSG_RETURN_VOID(render_target != nullptr, "Render target texture is null");
+		D3D12Texture& texture = static_cast<D3D12Texture&>(*render_target);
+		ASSERT_MSG_RETURN_VOID(texture.hasRtv(), "Render target texture has no RTV descriptor");
+		rtv_handles[count++] = texture.getRtvHandle();
 	}
 
-	command_list_->OMSetRenderTargets(1, &rtv_handle, FALSE, nullptr);
+	D3D12_CPU_DESCRIPTOR_HANDLE dsv_handle = {};
+	if (depth_stencil)
+	{
+		D3D12Texture& texture = static_cast<D3D12Texture&>(*depth_stencil);
+		ASSERT_MSG_RETURN_VOID(texture.hasDsv(), "Depth texture has no DSV descriptor");
+		dsv_handle = texture.getDsvHandle();
+	}
+	command_list_->OMSetRenderTargets(count, rtv_handles, FALSE, depth_stencil ? &dsv_handle : nullptr);
 }
 
 

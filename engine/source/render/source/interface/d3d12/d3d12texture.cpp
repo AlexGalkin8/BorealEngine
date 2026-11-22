@@ -90,6 +90,7 @@ std::unique_ptr<D3D12Texture> D3D12Texture::create(D3D12RenderDevice& render_dev
 	resource_desc.SampleDesc.Quality = 0;
 	resource_desc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
 	resource_desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+	resource_desc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
 	D3D12_RESOURCE_STATES initial_state = D3D12_RESOURCE_STATE_COPY_DEST;
 	D3D12_CLEAR_VALUE* clear_value_ptr = nullptr;
@@ -106,9 +107,12 @@ std::unique_ptr<D3D12Texture> D3D12Texture::create(D3D12RenderDevice& render_dev
 		clear_value.DepthStencil.Stencil = 0;
 		clear_value_ptr = &clear_value;
 	}
-	else
+	else if (desc.render_target)
 	{
 		resource_desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+		initial_state = D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE;
+		clear_value.Format = resource_desc.Format;
+		clear_value_ptr = &clear_value;
 	}
 
 	D3D12_ASSERT_RETURN_NULL(render_device.getD3D12Device()->CreateCommittedResource(
@@ -125,7 +129,10 @@ std::unique_ptr<D3D12Texture> D3D12Texture::create(D3D12RenderDevice& render_dev
 	}
 	else
 	{
-		ASSERT_MSG_RETURN_NULL(createRtvDescriptor(render_device, resource.Get(), rtv_descriptor), "Failed to create RTV descriptor for texture");
+		if (desc.render_target)
+		{
+			ASSERT_MSG_RETURN_NULL(createRtvDescriptor(render_device, resource.Get(), rtv_descriptor), "Failed to create RTV descriptor for texture");
+		}
 		ASSERT_MSG_RETURN_NULL(createSrvDescriptor(render_device, resource.Get(), resource_desc, srv_descriptor), "Failed to create SRV descriptor for texture");
 	}
 
@@ -198,7 +205,8 @@ D3D12Texture::~D3D12Texture()
 void D3D12Texture::uploadPixels(const void* data, uint32_t size)
 {
 	ASSERT_MSG_RETURN_VOID(render_device_ && !uploaded_ && data &&
-		desc_.format == ETextureFormat::kRGBA8_Unorm && desc_.depth == 1 && desc_.mipCount == 1,
+		!desc_.render_target && (desc_.format == ETextureFormat::kRGBA8_Unorm || desc_.format == ETextureFormat::kRGBA8_Unorm_Srgb) &&
+		desc_.depth == 1 && desc_.mipCount == 1,
 		"Upload requires a new single-mip RGBA8 texture");
 	const uint64_t row_size = static_cast<uint64_t>(desc_.width) * 4;
 	ASSERT_MSG_RETURN_VOID(row_size * desc_.height == size, "Invalid texture upload size");

@@ -4,6 +4,7 @@
 #include <cmath>
 #include <limits>
 #include <filesystem>
+#include <cstring>
 
 #pragma warning(push)
 #pragma warning(disable: 4996)
@@ -103,6 +104,63 @@ static const uint8_t* resolveAccessorData(const tinygltf3::Model& model, const t
 }
 
 
+struct VertexAttributeData
+{
+    const uint8_t* data = nullptr;
+    size_t stride = 0;
+    int32_t component_type = TG3_COMPONENT_TYPE_FLOAT;
+};
+
+
+static VertexAttributeData resolveVertexAttribute(const tinygltf3::Model& model, const tg3_accessor* accessor,
+    int32_t type, uint64_t vertex_count)
+{
+    if (!accessor || accessor->type != type || accessor->count != vertex_count)
+    {
+        return {};
+    }
+    const uint8_t* data = resolveAccessorData(model, *accessor);
+    if (!data)
+    {
+        return {};
+    }
+    const int32_t stride = tg3_accessor_byte_stride(accessor, &model->buffer_views[accessor->buffer_view]);
+    if (stride <= 0)
+    {
+        return {};
+    }
+    return { data, static_cast<size_t>(stride), accessor->component_type };
+}
+
+
+static void readTexcoord(const VertexAttributeData& attribute, uint64_t vertex_index, float (&texcoord)[2])
+{
+    if (!attribute.data)
+    {
+        return;
+    }
+    const uint8_t* source = attribute.data + attribute.stride * vertex_index;
+    switch (attribute.component_type)
+    {
+    case TG3_COMPONENT_TYPE_FLOAT:
+        std::memcpy(texcoord, source, sizeof(texcoord));
+        break;
+    case TG3_COMPONENT_TYPE_UNSIGNED_BYTE:
+        texcoord[0] = static_cast<float>(source[0]) / 255.0f;
+        texcoord[1] = static_cast<float>(source[1]) / 255.0f;
+        break;
+    case TG3_COMPONENT_TYPE_UNSIGNED_SHORT:
+    {
+        uint16_t values[2];
+        std::memcpy(values, source, sizeof(values));
+        texcoord[0] = static_cast<float>(values[0]) / 65535.0f;
+        texcoord[1] = static_cast<float>(values[1]) / 65535.0f;
+        break;
+    }
+    }
+}
+
+
 static LoadedMeshData loadPrimitiveFromModel(const tinygltf3::Model& model, const tg3_primitive& primitive)
 {
     ASSERT_MSG_RETURN(primitive.mode == TG3_MODE_TRIANGLES, LoadedMeshData{}, "Only triangle lists are supported");
@@ -113,17 +171,28 @@ static LoadedMeshData loadPrimitiveFromModel(const tinygltf3::Model& model, cons
         LoadedMeshData{}, "POSITION accessor must be float3");
 
     const tg3_accessor* texcoord_accessor = findAttributeAccessor(model, primitive, "TEXCOORD_0");
+    const tg3_accessor* normal_texcoord_accessor = nullptr;
+    if (primitive.material >= 0 && static_cast<uint32_t>(primitive.material) < model->materials_count)
+    {
+        const tg3_normal_texture_info& normal_texture = model->materials[primitive.material].normal_texture;
+        if (normal_texture.index >= 0)
+        {
+            const std::string attribute_name = "TEXCOORD_" + std::to_string(normal_texture.tex_coord);
+            normal_texcoord_accessor = findAttributeAccessor(model, primitive, attribute_name.c_str());
+        }
+    }
 
     const uint8_t* position_data = resolveAccessorData(model, *position_accessor);
     ASSERT_MSG_RETURN(position_data != nullptr, LoadedMeshData{}, "Failed to resolve POSITION data in glTF primitive");
 
-    const uint8_t* texcoord_data = texcoord_accessor ? resolveAccessorData(model, *texcoord_accessor) : nullptr;
-
     const int32_t position_stride = tg3_accessor_byte_stride(position_accessor,
         &model->buffer_views[position_accessor->buffer_view]);
-    const int32_t texcoord_stride = (texcoord_accessor && texcoord_accessor->buffer_view >= 0)
-        ? tg3_accessor_byte_stride(texcoord_accessor, &model->buffer_views[texcoord_accessor->buffer_view])
-        : 0;
+    const VertexAttributeData texcoord = resolveVertexAttribute(model, texcoord_accessor, TG3_TYPE_VEC2, position_accessor->count);
+    const VertexAttributeData normal_texcoord = resolveVertexAttribute(model, normal_texcoord_accessor, TG3_TYPE_VEC2, position_accessor->count);
+    const VertexAttributeData normal = resolveVertexAttribute(
+        model, findAttributeAccessor(model, primitive, "NORMAL"), TG3_TYPE_VEC3, position_accessor->count);
+    const VertexAttributeData tangent = resolveVertexAttribute(
+        model, findAttributeAccessor(model, primitive, "TANGENT"), TG3_TYPE_VEC4, position_accessor->count);
 
     LoadedMeshData loaded_mesh{};
     loaded_mesh.vertices.resize(static_cast<size_t>(position_accessor->count));
@@ -136,16 +205,19 @@ static LoadedMeshData loadPrimitiveFromModel(const tinygltf3::Model& model, cons
         dst_vertex.position[1] = src_position[1];
         dst_vertex.position[2] = -src_position[2];
 
-        if (texcoord_accessor != nullptr && texcoord_data != nullptr)
+        readTexcoord(texcoord, i, dst_vertex.texcoord);
+        readTexcoord(normal_texcoord, i, dst_vertex.normal_texcoord);
+        if (normal.data && normal.component_type == TG3_COMPONENT_TYPE_FLOAT)
         {
-            const float* src_texcoord = reinterpret_cast<const float*>(texcoord_data + static_cast<size_t>(texcoord_stride) * i);
-            dst_vertex.texcoord[0] = src_texcoord[0];
-            dst_vertex.texcoord[1] = src_texcoord[1];
-        }
-        else
-        {
-            dst_vertex.texcoord[0] = 0.0f;
-            dst_vertex.texcoord[1] = 0.0f;
+            std::memcpy(dst_vertex.normal, normal.data + normal.stride * i, sizeof(dst_vertex.normal));
+            dst_vertex.normal[2] = -dst_vertex.normal[2];
+            if (normal_texcoord.data && tangent.data && tangent.component_type == TG3_COMPONENT_TYPE_FLOAT)
+            {
+                std::memcpy(dst_vertex.tangent, tangent.data + tangent.stride * i, sizeof(dst_vertex.tangent));
+                dst_vertex.tangent[2] = -dst_vertex.tangent[2];
+                // Reflecting Z flips the handedness of the tangent basis.
+                dst_vertex.tangent[3] = -dst_vertex.tangent[3];
+            }
         }
 
         dst_vertex.color[0] = 1.0f;
@@ -291,6 +363,8 @@ static void fillTexturesAndMaterials(const tinygltf3::Model& model, LoadedModelD
 		material_data.material_index = material_index;
 		material_data.name = material.name.data ? material.name.data : "";
 		material_data.base_color_texture_index = material.pbr_metallic_roughness.base_color_texture.index;
+		material_data.normal_texture_index = material.normal_texture.index;
+		material_data.normal_scale = static_cast<float>(material.normal_texture.scale);
 		material_data.base_color_factor[0] = static_cast<float>(material.pbr_metallic_roughness.base_color_factor[0]);
 		material_data.base_color_factor[1] = static_cast<float>(material.pbr_metallic_roughness.base_color_factor[1]);
 		material_data.base_color_factor[2] = static_cast<float>(material.pbr_metallic_roughness.base_color_factor[2]);

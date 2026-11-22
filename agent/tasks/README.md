@@ -12,6 +12,7 @@
 | [008 — command-line arguments](008-command-line-arguments.md) | Implemented. Parser and sample startup verified. |
 | [009 — RenderDoc capture](009-renderdoc-launch.md) | In-process capture and pass order verified. |
 | [010 — refactor capture-tool startup](010-capture-tool-refactor.md) | Planned. |
+| [011 — opaque G-buffer pass](011-gbuffer-pass.md) | Implemented. Capture and GPU readback verified. |
 
 Document substantial tasks that benefit from continuity across chats, not every
 minor edit. File name: `NNN-short-topic.md`. Keep the table current.

@@ -51,6 +51,8 @@ private:
 		IBuffer* vertex_buffer = nullptr;
 		IBuffer* index_buffer = nullptr;
 		ITexture* base_color_texture = nullptr;
+		ITexture* normal_texture = nullptr;
+		float normal_scale = 0.0f;
 		uint32_t vertex_stride = 0;
 		uint32_t index_count = 0;
 	};
@@ -69,6 +71,12 @@ private:
 		asset::LoadedMeshData mesh_data;
 	};
 
+	struct MaterialTextures
+	{
+		ITexture* base_color = nullptr;
+		ITexture* normal = nullptr;
+	};
+
 private:
 	DeferredRenderer(IRenderDevice& render_device, const RenderSettings& render_settings);
 
@@ -78,22 +86,26 @@ private:
 
 	using StaticMeshBucket = std::vector<StaticMeshDraw>;
 	void depthPrepass(const StaticMeshBucket& bucket, ITexture& depth_texture);
-	void baseColorPass(const StaticMeshBucket& bucket, ITexture& depth_texture, ITexture& output_target);
-	void drawStaticMeshes(ICommandList& command_list, const StaticMeshBucket& bucket, bool bind_base_color) const;
+	void gBufferPass(const StaticMeshBucket& bucket, ITexture& depth_texture);
+	void showBaseColor(ITexture& output_target);
+	void drawStaticMeshes(ICommandList& command_list, const StaticMeshBucket& bucket, bool bind_material) const;
 	StaticMeshBucket buildStaticMeshBucket(const scene::Scene& scene, const scene::Camera& camera);
 	const RenderMesh* getOrCreateRenderMesh(const scene::MeshHandle& mesh);
 
 private:
 	IPipelineState* depth_prepass_pipeline_state_ = nullptr;
-	IPipelineState* base_color_pipeline_state_ = nullptr;
+	IPipelineState* gbuffer_pipeline_state_ = nullptr;
+	IPipelineState* show_base_color_pipeline_state_ = nullptr;
 
 	ITexture* depth_texture_ = nullptr;
+	ITexture* gbuffer_base_color_ = nullptr;
+	ITexture* gbuffer_normal_ = nullptr;
 	ITexture* default_white_texture_ = nullptr;
 
 	std::unordered_map<std::string, RenderMesh> render_meshes_;
 	std::unordered_map<std::string, std::vector<PrimitiveCacheEntry>> file_primitives_cache_;
 	std::unordered_map<std::string, std::vector<asset::LoadedMaterialData>> file_materials_cache_;
-	std::unordered_map<std::string, std::vector<ITexture*>> file_textures_cache_;
+	std::unordered_map<std::string, std::vector<MaterialTextures>> file_textures_cache_;
 };
 
 }  // namespace render

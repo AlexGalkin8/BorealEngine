@@ -14,6 +14,9 @@ struct LoadedMeshData
 		float position[3];
 		float texcoord[2];
 		float color[4];
+		float normal[3];
+		float tangent[4];
+		float normal_texcoord[2];
 	};
 
 	std::vector<Vertex> vertices;
@@ -37,6 +40,8 @@ struct LoadedMaterialData
 	uint32_t material_index = 0;
 	std::string name;
 	int32_t base_color_texture_index = -1;
+	int32_t normal_texture_index = -1;
+	float normal_scale = 1.0f;
 	float base_color_factor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 };
 

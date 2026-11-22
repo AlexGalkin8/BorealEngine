@@ -20,6 +20,7 @@ public:
 		uint32_t depth = 1;
 		uint32_t mipCount = 1;
 		ETextureFormat format = ETextureFormat::kUnknown;
+		bool render_target = false;
 	};
 
 public:

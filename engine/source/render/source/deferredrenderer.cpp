@@ -15,8 +15,13 @@
 #include "interface/texture.h"
 #include "interface/buffer.h"
 
+#include <array>
+
 
 namespace render {
+
+static constexpr ETextureFormat kGBufferBaseColorFormat = ETextureFormat::kRGBA8_Unorm_Srgb;
+static constexpr ETextureFormat kGBufferNormalFormat = ETextureFormat::kRGBA16_Float;
 
 
 static IBuffer* createDebugTriangleVertexBuffer(IRenderDevice& render_device)
@@ -69,7 +74,8 @@ static void drawDebugTriangle(
 
 static ITexture* createTextureFromLoadedTextureData(
 	IRenderDevice& render_device,
-	const asset::LoadedTextureData& loaded_texture)
+	const asset::LoadedTextureData& loaded_texture,
+	ETextureFormat format)
 {
 	if (loaded_texture.width <= 0 || loaded_texture.height <= 0)
 	{
@@ -95,9 +101,10 @@ static ITexture* createTextureFromLoadedTextureData(
 	texture_desc.height = height;
 	texture_desc.depth = 1;
 	texture_desc.mipCount = 1;
-	texture_desc.format = ETextureFormat::kRGBA8_Unorm;
+	texture_desc.format = format;
 
 	ITexture* texture = render_device.getResourceManager().createTexture(texture_desc);
+	ASSERT_MSG_RETURN_NULL(texture != nullptr, "Failed to create material texture");
 
 	const uint32_t pixel_count = width * height;
 	std::vector<uint8_t> rgba_pixels(static_cast<size_t>(pixel_count) * 4ull, 255);
@@ -135,7 +142,8 @@ void DeferredRenderer::render(const scene::Scene& scene, const scene::Camera& ca
 
 	const StaticMeshBucket bucket = buildStaticMeshBucket(scene, camera);
 	depthPrepass(bucket, depth_texture);
-	baseColorPass(bucket, depth_texture, output_target);
+	gBufferPass(bucket, depth_texture);
+	showBaseColor(output_target);
 	render_device_.executeCommandLists(ECommandListType::kDirect);
 }
 
@@ -152,7 +160,7 @@ void DeferredRenderer::resize(uint32_t width, uint32_t height)
 	initResizableTextures(width, height);
 	if (render_settings_.render_width != width || render_settings_.render_height != height)
 	{
-		LOG_WARNING("DeferredRenderer", "Resize to {}x{} skipped: failed to allocate the replacement depth texture or its DSV.",
+		LOG_WARNING("DeferredRenderer", "Resize to {}x{} skipped: failed to allocate the replacement frame targets.",
 			width, height);
 	}
 }
@@ -197,19 +205,39 @@ void DeferredRenderer::initResizableTextures(uint32_t width, uint32_t height)
 {
 	GpuResourceManager& resource_manager = render_device_.getResourceManager();
 
-	ITexture::Desc depth_desc = {};
-	depth_desc.width = width;
-	depth_desc.height = height;
-	depth_desc.format = ETextureFormat::D32_Float;
-	ITexture* replacement_depth = resource_manager.createTexture(depth_desc);
-	ASSERT_MSG_RETURN_VOID(replacement_depth != nullptr, "Failed to create the depth texture");
-
-	if (depth_texture_)
+	constexpr std::array<ETextureFormat, 3> formats = { ETextureFormat::D32_Float, kGBufferBaseColorFormat, kGBufferNormalFormat };
+	const std::array<ITexture**, formats.size()> targets = { &depth_texture_, &gbuffer_base_color_, &gbuffer_normal_ };
+	std::array<ITexture*, formats.size()> replacements = {};
+	ITexture::Desc desc = {};
+	desc.width = width;
+	desc.height = height;
+	for (size_t index = 0; index < formats.size(); ++index)
 	{
-		resource_manager.releaseTexture(*depth_texture_);
+		desc.format = formats[index];
+		desc.render_target = index != 0;
+		replacements[index] = resource_manager.createTexture(desc);
+		if (!replacements[index])
+		{
+			for (size_t created = 0; created < index; ++created)
+			{
+				resource_manager.releaseTexture(*replacements[created]);
+			}
+			return;
+		}
 	}
 
-	depth_texture_ = replacement_depth;
+	SET_RENDER_OBJECT_DEBUG_NAME(*replacements[0], "DepthPrepassDepth");
+	SET_RENDER_OBJECT_DEBUG_NAME(*replacements[1], "GBufferAlbedo");
+	SET_RENDER_OBJECT_DEBUG_NAME(*replacements[2], "GBufferWorldNormal");
+	for (size_t index = 0; index < targets.size(); ++index)
+	{
+		ITexture*& target = *targets[index];
+		if (target)
+		{
+			resource_manager.releaseTexture(*target);
+		}
+		target = replacements[index];
+	}
 	render_settings_.render_width = width;
 	render_settings_.render_height = height;
 }
@@ -225,17 +253,29 @@ void DeferredRenderer::initPipelineStates()
 	depth_desc.output_merger_state.depth_stencil.format = ETextureFormat::D32_Float;
 	depth_prepass_pipeline_state_ = &pipeline_state_manager_.createPipelineState(depth_desc);
 
-	GraphicsPipelineDesc color_desc = depth_desc;
-	color_desc.shader_state.shader_name = "base";
-	color_desc.shader_state.shader_stages = EGraphicsShaderStage::kVertex | EGraphicsShaderStage::kPixel;
-	color_desc.shader_state.addDefine(L"USE_TEXTURE", L"1");
-	color_desc.input_layout_state.addAttribute(ESemanticType::kTexCoord, ETextureFormat::kRG32_Float);
-	color_desc.input_layout_state.addAttribute(ESemanticType::kColor, ETextureFormat::kRGBA32_Float);
-	color_desc.resource_layout_state[1] = RootParameter::makeDescriptorTable({ DescriptorRange{ DescriptorType::kSRV, 0, 1 } });
-	color_desc.output_merger_state.addRenderTarget(ETextureFormat::kRGBA8_Unorm);
-	color_desc.output_merger_state.depth_stencil.depth_write = false;
-	color_desc.output_merger_state.depth_stencil.depth_func = EDepthFunc::kEqual;
-	base_color_pipeline_state_ = &pipeline_state_manager_.createPipelineState(color_desc);
+	GraphicsPipelineDesc gbuffer_desc = depth_desc;
+	gbuffer_desc.shader_state.shader_name = "gbuffer";
+	gbuffer_desc.shader_state.shader_stages = EGraphicsShaderStage::kVertex | EGraphicsShaderStage::kPixel;
+	gbuffer_desc.input_layout_state.addAttribute(ESemanticType::kTexCoord, ETextureFormat::kRG32_Float);
+	gbuffer_desc.input_layout_state.addAttribute(ESemanticType::kColor, ETextureFormat::kRGBA32_Float);
+	gbuffer_desc.input_layout_state.addAttribute(ESemanticType::kNormal, ETextureFormat::kRGB32_Float);
+	gbuffer_desc.input_layout_state.addAttribute(ESemanticType::kTangent, ETextureFormat::kRGBA32_Float);
+	gbuffer_desc.input_layout_state.addAttribute(ESemanticType::kTexCoord, ETextureFormat::kRG32_Float);
+	gbuffer_desc.resource_layout_state[1] = RootParameter::makeDescriptorTable({ DescriptorRange{ DescriptorType::kSRV, 0, 2 } });
+	gbuffer_desc.resource_layout_state[2] = RootParameter::makeConstants32Bits(1, 1, 0);
+	gbuffer_desc.output_merger_state.addRenderTarget(kGBufferBaseColorFormat);
+	gbuffer_desc.output_merger_state.addRenderTarget(kGBufferNormalFormat);
+	gbuffer_desc.output_merger_state.depth_stencil.depth_write = false;
+	gbuffer_desc.output_merger_state.depth_stencil.depth_func = EDepthFunc::kEqual;
+	gbuffer_pipeline_state_ = &pipeline_state_manager_.createPipelineState(gbuffer_desc);
+
+	GraphicsPipelineDesc preview_desc = {};
+	preview_desc.shader_state.shader_name = "gbuffer_base_color";
+	preview_desc.resource_layout_state[0] = RootParameter::makeDescriptorTable({ DescriptorRange{ DescriptorType::kSRV, 0, 1 } });
+	preview_desc.output_merger_state.addRenderTarget(ETextureFormat::kRGBA8_Unorm);
+	preview_desc.output_merger_state.depth_stencil.depth_enable = false;
+	preview_desc.output_merger_state.depth_stencil.depth_write = false;
+	show_base_color_pipeline_state_ = &pipeline_state_manager_.createPipelineState(preview_desc);
 }
 
 
@@ -247,27 +287,43 @@ void DeferredRenderer::depthPrepass(const StaticMeshBucket& bucket, ITexture& de
 	command_list.setPipelineState(*depth_prepass_pipeline_state_);
 	drawStaticMeshes(command_list, bucket, false);
 
-	command_list.transitionTexture(depth_texture, EResourceState::kDepthWrite, EResourceState::kDepthRead);
 	render_device_.submitCommandList(command_list);
 }
 
 
-void DeferredRenderer::baseColorPass(const StaticMeshBucket& bucket, ITexture& depth_texture, ITexture& output_target)
+void DeferredRenderer::gBufferPass(const StaticMeshBucket& bucket, ITexture& depth_texture)
 {
-	ICommandList& command_list = render_device_.acquireCommandList(ECommandListType::kDirect, "BaseColorPass");
-	command_list.transitionTexture(output_target, EResourceState::kPresent, EResourceState::kRenderTarget);
-	command_list.setRenderTarget(output_target, &depth_texture);
-	command_list.clearRenderTarget(output_target, 0.1f, 0.1f, 0.1f, 1.0f);
-	command_list.setPipelineState(*base_color_pipeline_state_);
+	ICommandList& command_list = render_device_.acquireCommandList(ECommandListType::kDirect, "GBufferPass");
+	command_list.transitionTexture(*gbuffer_base_color_, EResourceState::kShaderResource, EResourceState::kRenderTarget);
+	command_list.transitionTexture(*gbuffer_normal_, EResourceState::kShaderResource, EResourceState::kRenderTarget);
+	command_list.setRenderTargets({ gbuffer_base_color_, gbuffer_normal_ }, &depth_texture);
+	command_list.clearRenderTarget(*gbuffer_base_color_, 0.0f, 0.0f, 0.0f, 0.0f);
+	command_list.clearRenderTarget(*gbuffer_normal_, 0.0f, 0.0f, 0.0f, 0.0f);
+	command_list.setPipelineState(*gbuffer_pipeline_state_);
 	drawStaticMeshes(command_list, bucket, true);
+	command_list.transitionTexture(*gbuffer_base_color_, EResourceState::kRenderTarget, EResourceState::kShaderResource);
+	command_list.transitionTexture(*gbuffer_normal_, EResourceState::kRenderTarget, EResourceState::kShaderResource);
+	render_device_.submitCommandList(command_list);
+}
 
-	command_list.transitionTexture(depth_texture, EResourceState::kDepthRead, EResourceState::kDepthWrite);
+
+void DeferredRenderer::showBaseColor(ITexture& output_target)
+{
+	ICommandList& command_list = render_device_.acquireCommandList(ECommandListType::kDirect, "GBufferBaseColorPreview");
+	command_list.transitionTexture(output_target, EResourceState::kPresent, EResourceState::kRenderTarget);
+	command_list.setRenderTarget(output_target);
+	command_list.setPipelineState(*show_base_color_pipeline_state_);
+	command_list.setViewport(0.0f, 0.0f, static_cast<float>(output_target.getWidth()), static_cast<float>(output_target.getHeight()));
+	command_list.setScissorRect(0, 0, static_cast<int32_t>(output_target.getWidth()), static_cast<int32_t>(output_target.getHeight()));
+	command_list.setPrimitiveTopology(EPrimitiveTopology::kTriangle);
+	command_list.setDescriptorSet(0, { DescriptorResource::textureSRV(gbuffer_base_color_) });
+	command_list.draw(3, 0);
 	command_list.transitionTexture(output_target, EResourceState::kRenderTarget, EResourceState::kPresent);
 	render_device_.submitCommandList(command_list);
 }
 
 
-void DeferredRenderer::drawStaticMeshes(ICommandList& command_list, const StaticMeshBucket& bucket, bool bind_base_color) const
+void DeferredRenderer::drawStaticMeshes(ICommandList& command_list, const StaticMeshBucket& bucket, bool bind_material) const
 {
 	command_list.setViewport(0.0f, 0.0f, static_cast<float>(render_settings_.render_width), static_cast<float>(render_settings_.render_height));
 	command_list.setScissorRect(0, 0, static_cast<int32_t>(render_settings_.render_width), static_cast<int32_t>(render_settings_.render_height));
@@ -276,9 +332,11 @@ void DeferredRenderer::drawStaticMeshes(ICommandList& command_list, const Static
 	for (const StaticMeshDraw& draw : bucket)
 	{
 		command_list.setGraphicsRoot32BitConstants(0, 32, &draw.constants);
-		if (bind_base_color)
+		if (bind_material)
 		{
-			command_list.setDescriptorSet(1, { DescriptorResource::textureSRV(draw.mesh.base_color_texture) });
+			command_list.setDescriptorSet(1, { DescriptorResource::textureSRV(draw.mesh.base_color_texture),
+				DescriptorResource::textureSRV(draw.mesh.normal_texture) });
+			command_list.setGraphicsRoot32BitConstants(2, 1, &draw.mesh.normal_scale);
 		}
 		command_list.setVertexBuffer(*draw.mesh.vertex_buffer, draw.mesh.vertex_stride);
 		command_list.setIndexBuffer(*draw.mesh.index_buffer);
@@ -351,12 +409,29 @@ const DeferredRenderer::RenderMesh* DeferredRenderer::getOrCreateRenderMesh(cons
 
 		file_materials_cache_.emplace(mesh.resource_path, loaded_model.materials);
 
-		std::vector<ITexture*> loaded_textures;
-		loaded_textures.reserve(loaded_model.textures.size());
-		for (const asset::LoadedTextureData& loaded_texture : loaded_model.textures)
+		std::vector<MaterialTextures> loaded_textures(loaded_model.textures.size());
+		for (const asset::LoadedMaterialData& material : loaded_model.materials)
 		{
-			ITexture* texture = createTextureFromLoadedTextureData(render_device_, loaded_texture);
-			loaded_textures.push_back(texture);
+			const int32_t base_color_index = material.base_color_texture_index;
+			if (base_color_index >= 0 && static_cast<size_t>(base_color_index) < loaded_textures.size())
+			{
+				ITexture*& texture = loaded_textures[base_color_index].base_color;
+				if (!texture)
+				{
+					texture = createTextureFromLoadedTextureData(render_device_, loaded_model.textures[base_color_index],
+						ETextureFormat::kRGBA8_Unorm_Srgb);
+				}
+			}
+			const int32_t normal_index = material.normal_texture_index;
+			if (normal_index >= 0 && static_cast<size_t>(normal_index) < loaded_textures.size())
+			{
+				ITexture*& texture = loaded_textures[normal_index].normal;
+				if (!texture)
+				{
+					texture = createTextureFromLoadedTextureData(render_device_, loaded_model.textures[normal_index],
+						ETextureFormat::kRGBA8_Unorm);
+				}
+			}
 		}
 		file_textures_cache_.emplace(mesh.resource_path, std::move(loaded_textures));
 	}
@@ -375,23 +450,33 @@ const DeferredRenderer::RenderMesh* DeferredRenderer::getOrCreateRenderMesh(cons
 	gpu_data.vertex_stride = sizeof(asset::LoadedMeshData::Vertex);
 	gpu_data.index_count = static_cast<uint32_t>(loaded_mesh.indices.size());
 	gpu_data.base_color_texture = default_white_texture_;
+	gpu_data.normal_texture = default_white_texture_;
 
 	auto materials_it = file_materials_cache_.find(mesh.resource_path);
 	auto textures_it = file_textures_cache_.find(mesh.resource_path);
 	if (materials_it != file_materials_cache_.end() && textures_it != file_textures_cache_.end())
 	{
 		const std::vector<asset::LoadedMaterialData>& materials = materials_it->second;
-		const std::vector<ITexture*>& textures = textures_it->second;
+		const std::vector<MaterialTextures>& textures = textures_it->second;
 
 		if (primitive_it->material_index >= 0 && static_cast<uint32_t>(primitive_it->material_index) < materials.size())
 		{
 			const asset::LoadedMaterialData& material = materials[primitive_it->material_index];
 			if (material.base_color_texture_index >= 0 && static_cast<uint32_t>(material.base_color_texture_index) < textures.size())
 			{
-				ITexture* texture = textures[material.base_color_texture_index];
+				ITexture* texture = textures[material.base_color_texture_index].base_color;
 				if (texture != nullptr)
 				{
 					gpu_data.base_color_texture = texture;
+				}
+			}
+			if (material.normal_texture_index >= 0 && static_cast<size_t>(material.normal_texture_index) < textures.size())
+			{
+				ITexture* texture = textures[material.normal_texture_index].normal;
+				if (texture)
+				{
+					gpu_data.normal_texture = texture;
+					gpu_data.normal_scale = material.normal_scale;
 				}
 			}
 		}
