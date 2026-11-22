@@ -168,8 +168,9 @@ GraphicsCompiledShaders IPipelineStateManager::compileGraphicsShaders(const Grap
 
 	GraphicsCompiledShaders compiled_shaders = {};
 
-	ASSERT_MSG_RETURN_EMPTY((desc.shader_state.shader_stages | EGraphicsShaderStage::kVertex) != EGraphicsShaderStage(0),
-		"Vertex shader stage is required for creating graphics pipeline state. Shader name=%s", desc.shader_state.shader_name);
+	const EGraphicsShaderStage shader_stages = desc.shader_state.shader_stages;
+	ASSERT_MSG_RETURN_EMPTY((shader_stages & EGraphicsShaderStage::kVertex) != EGraphicsShaderStage::kNone,
+		"Vertex shader stage is required for creating graphics pipeline state. Shader name=%s", desc.shader_state.shader_name.c_str());
 
 	compiled_shaders.vertex_shader = shader_compiler_->compile(
 		translateShaderStageToShaderType(EGraphicsShaderStage::kVertex),
@@ -177,7 +178,7 @@ GraphicsCompiledShaders IPipelineStateManager::compileGraphicsShaders(const Grap
 		translateShaderStageToShaderEntryPoint(EGraphicsShaderStage::kVertex),
 		desc.shader_state.defines);
 
-	if ((desc.shader_state.shader_stages & EGraphicsShaderStage::kPixel) != EGraphicsShaderStage(0))
+	if ((shader_stages & EGraphicsShaderStage::kPixel) != EGraphicsShaderStage::kNone)
 	{
 		compiled_shaders.pixel_shader = shader_compiler_->compile(
 			translateShaderStageToShaderType(EGraphicsShaderStage::kPixel),
@@ -186,8 +187,8 @@ GraphicsCompiledShaders IPipelineStateManager::compileGraphicsShaders(const Grap
 			desc.shader_state.defines);
 	}
 
-	if ((desc.shader_state.shader_stages & EGraphicsShaderStage::kHull) != EGraphicsShaderStage(0) &&
-		(desc.shader_state.shader_stages & EGraphicsShaderStage::kDomain) != EGraphicsShaderStage(0))
+	if ((shader_stages & EGraphicsShaderStage::kHull) != EGraphicsShaderStage::kNone &&
+		(shader_stages & EGraphicsShaderStage::kDomain) != EGraphicsShaderStage::kNone)
 	{
 		compiled_shaders.hull_shader = shader_compiler_->compile(
 			translateShaderStageToShaderType(EGraphicsShaderStage::kHull),
@@ -202,7 +203,7 @@ GraphicsCompiledShaders IPipelineStateManager::compileGraphicsShaders(const Grap
 			desc.shader_state.defines);
 	}
 
-	if ((desc.shader_state.shader_stages & EGraphicsShaderStage::kGeometry) != EGraphicsShaderStage(0))
+	if ((shader_stages & EGraphicsShaderStage::kGeometry) != EGraphicsShaderStage::kNone)
 	{
 		compiled_shaders.geometry_shader = shader_compiler_->compile(
 			translateShaderStageToShaderType(EGraphicsShaderStage::kGeometry),

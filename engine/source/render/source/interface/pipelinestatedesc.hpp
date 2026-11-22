@@ -90,13 +90,14 @@ enum class ESemanticType
 };
 
 
-enum class EGraphicsShaderStage
+enum class EGraphicsShaderStage : uint32_t
 {
-	kVertex = 0,
-	kPixel,
-	kDomain,
-	kHull,
-	kGeometry
+	kNone = 0,
+	kVertex = 1u << 0,
+	kPixel = 1u << 1,
+	kDomain = 1u << 2,
+	kHull = 1u << 3,
+	kGeometry = 1u << 4,
 };
 ENUM_CLASS_BITWISE_OPERATORS(EGraphicsShaderStage);
 

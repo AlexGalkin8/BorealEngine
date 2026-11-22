@@ -129,7 +129,13 @@ std::unique_ptr<DeferredRenderer> DeferredRenderer::create(IRenderDevice& render
 
 void DeferredRenderer::render(const scene::Scene& scene, const scene::Camera& camera, ITexture& output_target)
 {
-	GBufferPass(scene, camera, output_target);
+	ITexture& depth_texture = *depth_texture_;
+	ASSERT_MSG_RETURN_VOID(output_target.getWidth() == depth_texture.getWidth() && output_target.getHeight() == depth_texture.getHeight(),
+		"Depth and color targets must have the same dimensions");
+
+	const StaticMeshBucket bucket = buildStaticMeshBucket(scene, camera);
+	depthPrepass(bucket, depth_texture);
+	baseColorPass(bucket, depth_texture, output_target);
 	render_device_.executeCommandLists(ECommandListType::kDirect);
 }
 
@@ -211,88 +217,100 @@ void DeferredRenderer::initResizableTextures(uint32_t width, uint32_t height)
 
 void DeferredRenderer::initPipelineStates()
 {
-	{
-		GraphicsPipelineDesc mesh_desc = {};
-		mesh_desc.shader_state.shader_name = "base";
-		mesh_desc.shader_state.addDefine(L"USE_TEXTURE", L"1");
-		mesh_desc.input_layout_state.topology = EPrimitiveTopology::kTriangle;
-		mesh_desc.input_layout_state.addAttribute(ESemanticType::kPosition, ETextureFormat::kRGB32_Float);
-		mesh_desc.input_layout_state.addAttribute(ESemanticType::kTexCoord, ETextureFormat::kRG32_Float);
-		mesh_desc.input_layout_state.addAttribute(ESemanticType::kColor, ETextureFormat::kRGBA32_Float);
-		mesh_desc.resource_layout_state[0] = RootParameter::makeConstants32Bits(0, 32, 0);
-		mesh_desc.resource_layout_state[1] = RootParameter::makeDescriptorTable({ DescriptorRange{ DescriptorType::kSRV, 0, 1 } });
-		mesh_desc.rasterizer_state.cull_mode = ECullMode::kNone;
-		mesh_desc.rasterizer_state.depth_clip_enable = true;
-		mesh_desc.rasterizer_state.fill_mode = EFillMode::kSolid;
-		mesh_desc.output_merger_state.addRenderTarget(ETextureFormat::kRGBA8_Unorm);
-		mesh_desc.output_merger_state.depth_stencil.format = ETextureFormat::D32_Float;
-		mesh_desc.output_merger_state.depth_stencil.depth_enable = true;
-		mesh_desc.output_merger_state.depth_stencil.depth_write = true;
-		mesh_desc.output_merger_state.depth_stencil.depth_func = EDepthFunc::kLess;
-		mesh_desc.output_merger_state.depth_stencil.stencil_enable = false;
-		mesh_pipeline_state_ = &pipeline_state_manager_.createPipelineState(mesh_desc);
-	}
+	GraphicsPipelineDesc depth_desc = {};
+	depth_desc.shader_state.shader_name = "depth_prepass";
+	depth_desc.shader_state.shader_stages = EGraphicsShaderStage::kVertex;
+	depth_desc.input_layout_state.addAttribute(ESemanticType::kPosition, ETextureFormat::kRGB32_Float);
+	depth_desc.resource_layout_state[0] = RootParameter::makeConstants32Bits(0, 32, 0);
+	depth_desc.output_merger_state.depth_stencil.format = ETextureFormat::D32_Float;
+	depth_prepass_pipeline_state_ = &pipeline_state_manager_.createPipelineState(depth_desc);
+
+	GraphicsPipelineDesc color_desc = depth_desc;
+	color_desc.shader_state.shader_name = "base";
+	color_desc.shader_state.shader_stages = EGraphicsShaderStage::kVertex | EGraphicsShaderStage::kPixel;
+	color_desc.shader_state.addDefine(L"USE_TEXTURE", L"1");
+	color_desc.input_layout_state.addAttribute(ESemanticType::kTexCoord, ETextureFormat::kRG32_Float);
+	color_desc.input_layout_state.addAttribute(ESemanticType::kColor, ETextureFormat::kRGBA32_Float);
+	color_desc.resource_layout_state[1] = RootParameter::makeDescriptorTable({ DescriptorRange{ DescriptorType::kSRV, 0, 1 } });
+	color_desc.output_merger_state.addRenderTarget(ETextureFormat::kRGBA8_Unorm);
+	color_desc.output_merger_state.depth_stencil.depth_write = false;
+	color_desc.output_merger_state.depth_stencil.depth_func = EDepthFunc::kEqual;
+	base_color_pipeline_state_ = &pipeline_state_manager_.createPipelineState(color_desc);
 }
 
 
-void DeferredRenderer::GBufferPass(const scene::Scene& scene, const scene::Camera& camera, ITexture& output_target)
+void DeferredRenderer::depthPrepass(const StaticMeshBucket& bucket, ITexture& depth_texture)
 {
-	ICommandList& command_list = render_device_.acquireCommandList(ECommandListType::kDirect, "GBufferPass");
+	ICommandList& command_list = render_device_.acquireCommandList(ECommandListType::kDirect, "DepthPrepass");
+	command_list.setDepthStencil(depth_texture);
+	command_list.clearDepthStencil(depth_texture);
+	command_list.setPipelineState(*depth_prepass_pipeline_state_);
+	drawStaticMeshes(command_list, bucket, false);
 
-	command_list.transitionTexture(output_target, EResourceState::kPresent, EResourceState::kRenderTarget);
-	command_list.setRenderTarget(output_target, depth_texture_);
-	command_list.clearRenderTarget(output_target, 0.1f, 0.1f, 0.1f, 1.0f);
-	command_list.clearDepthStencil(*depth_texture_);
-	command_list.setViewport(0.0f, 0.0f, static_cast<float>(output_target.getDesc().width), static_cast<float>(output_target.getDesc().height));
-	command_list.setScissorRect(0, 0, static_cast<int32_t>(output_target.getDesc().width), static_cast<int32_t>(output_target.getDesc().height));
-
-	command_list.setPipelineState(*mesh_pipeline_state_);
-	command_list.setPrimitiveTopology(EPrimitiveTopology::kTriangle);
-
-	for (const scene::StaticMeshActor* static_mesh_actor : buildStaticMeshBucket(scene))
-	{
-		CameraObjectConstants constants = {};
-		constants.world = static_mesh_actor->getTransform().toMatrix4x4();
-		constants.view_projection = camera.getViewProjectionMatrix();
-		command_list.setGraphicsRoot32BitConstants(0, 32, &constants);
-
-		const auto& mesh_slots = static_mesh_actor->getMeshRenderer().getMeshSlots();
-		for (const scene::MeshSlot& slot : mesh_slots)
-		{
-			const RenderMesh* imported_mesh = getOrCreateRenderMesh(slot.mesh);
-			if (imported_mesh != nullptr)
-			{
-				ASSERT_MSG_RETURN_VOID(imported_mesh->base_color_texture != nullptr, "Base color texture is not initialized");
-				command_list.setDescriptorSet(1, { DescriptorResource::textureSRV(imported_mesh->base_color_texture) });
-
-				command_list.setVertexBuffer(*imported_mesh->vertex_buffer, imported_mesh->vertex_stride);
-				command_list.setIndexBuffer(*imported_mesh->index_buffer);
-				command_list.drawIndexed(imported_mesh->index_count, 0, 0);
-				continue;
-			}
-		}
-	}
-
-	command_list.transitionTexture(output_target, EResourceState::kRenderTarget, EResourceState::kPresent);
-
+	command_list.transitionTexture(depth_texture, EResourceState::kDepthWrite, EResourceState::kDepthRead);
 	render_device_.submitCommandList(command_list);
 }
 
 
-DeferredRenderer::StaticMeshBucket DeferredRenderer::buildStaticMeshBucket(const scene::Scene& scene) const
+void DeferredRenderer::baseColorPass(const StaticMeshBucket& bucket, ITexture& depth_texture, ITexture& output_target)
+{
+	ICommandList& command_list = render_device_.acquireCommandList(ECommandListType::kDirect, "BaseColorPass");
+	command_list.transitionTexture(output_target, EResourceState::kPresent, EResourceState::kRenderTarget);
+	command_list.setRenderTarget(output_target, &depth_texture);
+	command_list.clearRenderTarget(output_target, 0.1f, 0.1f, 0.1f, 1.0f);
+	command_list.setPipelineState(*base_color_pipeline_state_);
+	drawStaticMeshes(command_list, bucket, true);
+
+	command_list.transitionTexture(depth_texture, EResourceState::kDepthRead, EResourceState::kDepthWrite);
+	command_list.transitionTexture(output_target, EResourceState::kRenderTarget, EResourceState::kPresent);
+	render_device_.submitCommandList(command_list);
+}
+
+
+void DeferredRenderer::drawStaticMeshes(ICommandList& command_list, const StaticMeshBucket& bucket, bool bind_base_color) const
+{
+	command_list.setViewport(0.0f, 0.0f, static_cast<float>(render_settings_.render_width), static_cast<float>(render_settings_.render_height));
+	command_list.setScissorRect(0, 0, static_cast<int32_t>(render_settings_.render_width), static_cast<int32_t>(render_settings_.render_height));
+	command_list.setPrimitiveTopology(EPrimitiveTopology::kTriangle);
+
+	for (const StaticMeshDraw& draw : bucket)
+	{
+		command_list.setGraphicsRoot32BitConstants(0, 32, &draw.constants);
+		if (bind_base_color)
+		{
+			command_list.setDescriptorSet(1, { DescriptorResource::textureSRV(draw.mesh.base_color_texture) });
+		}
+		command_list.setVertexBuffer(*draw.mesh.vertex_buffer, draw.mesh.vertex_stride);
+		command_list.setIndexBuffer(*draw.mesh.index_buffer);
+		command_list.drawIndexed(draw.mesh.index_count, 0, 0);
+	}
+}
+
+
+DeferredRenderer::StaticMeshBucket DeferredRenderer::buildStaticMeshBucket(const scene::Scene& scene, const scene::Camera& camera)
 {
 	StaticMeshBucket bucket;
-	const auto& static_mesh_actors = scene.getStaticMeshActors();
+	const std::vector<std::shared_ptr<scene::StaticMeshActor>>& static_mesh_actors = scene.getStaticMeshActors();
 	bucket.reserve(static_mesh_actors.size());
+	const math::Matrix4x4& view_projection = camera.getViewProjectionMatrix();
 
-	for (const auto& static_mesh_actor : static_mesh_actors)
+	for (const std::shared_ptr<scene::StaticMeshActor>& static_mesh_actor : static_mesh_actors)
 	{
 		if (!static_mesh_actor || !static_mesh_actor->isVisible())
 		{
 			continue;
 		}
 
-		bucket.push_back(static_mesh_actor.get());
+		const CameraObjectConstants constants = { static_mesh_actor->getTransform().toMatrix4x4(), view_projection };
+		for (const scene::MeshSlot& slot : static_mesh_actor->getMeshRenderer().getMeshSlots())
+		{
+			const RenderMesh* mesh = getOrCreateRenderMesh(slot.mesh);
+			if (mesh)
+			{
+				ASSERT_MSG_RETURN(mesh->base_color_texture != nullptr, bucket, "Base color texture is not initialized");
+				bucket.push_back({ *mesh, constants });
+			}
+		}
 	}
 
 	return bucket;

@@ -1,10 +1,5 @@
 #include "static_samplers.hlsli"
-
-cbuffer CameraCB : register(b0)
-{
-    float4x4 gWorld;
-    float4x4 gViewProjection;
-}
+#include "mesh_transform.hlsli"
 
 #ifdef USE_TEXTURE
 Texture2D    gBaseColorTexture : register(t0);
@@ -38,8 +33,7 @@ VS_OUTPUT vertexShader(VS_INPUT input)
 {
     VS_OUTPUT output;
 
-    float4 world_pos = mul(gWorld, float4(input.position, 1.0));
-    output.position = mul(gViewProjection, world_pos);
+    output.position = transformMeshPositionToClipSpace(input.position);
 
 #ifdef USE_VERTEX_COLOR
     output.color = input.color;

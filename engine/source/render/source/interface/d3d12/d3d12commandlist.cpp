@@ -137,6 +137,16 @@ void D3D12CommandList::setRenderTarget(ITexture& render_target, ITexture* depth_
 }
 
 
+void D3D12CommandList::setDepthStencil(ITexture& depth_stencil)
+{
+	D3D12Texture& d3d12_texture = static_cast<D3D12Texture&>(depth_stencil);
+	ASSERT_MSG_RETURN_VOID(d3d12_texture.hasDsv(), "Depth texture has no DSV descriptor");
+
+	const D3D12_CPU_DESCRIPTOR_HANDLE dsv_handle = d3d12_texture.getDsvHandle();
+	command_list_->OMSetRenderTargets(0, nullptr, FALSE, &dsv_handle);
+}
+
+
 void D3D12CommandList::clearRenderTarget(ITexture& render_target, float r, float g, float b, float a)
 {
 	D3D12Texture& d3d12_texture = static_cast<D3D12Texture&>(render_target);
@@ -152,7 +162,12 @@ void D3D12CommandList::clearDepthStencil(ITexture& depth_stencil, float depth, u
 	D3D12Texture& d3d12_texture = static_cast<D3D12Texture&>(depth_stencil);
 	ASSERT_MSG_RETURN_VOID(d3d12_texture.hasDsv(), "CommandList: depth texture has no DSV descriptor");
 
-	command_list_->ClearDepthStencilView(d3d12_texture.getDsvHandle(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, depth, stencil, 0, nullptr);
+	D3D12_CLEAR_FLAGS clear_flags = D3D12_CLEAR_FLAG_DEPTH;
+	if (depth_stencil.getDesc().format == ETextureFormat::D24_Unorm_S8_Uint)
+	{
+		clear_flags |= D3D12_CLEAR_FLAG_STENCIL;
+	}
+	command_list_->ClearDepthStencilView(d3d12_texture.getDsvHandle(), clear_flags, depth, stencil, 0, nullptr);
 }
 
 

@@ -56,6 +56,7 @@ public:
 
 	// Output
 	void setRenderTarget(ITexture& render_target, ITexture* depth_stencil = nullptr) override;
+	void setDepthStencil(ITexture& depth_stencil) override;
 	void clearRenderTarget(ITexture& render_target, float r, float g, float b, float a) override;
 	void clearDepthStencil(ITexture& depth_stencil, float depth = 1.0f, uint8_t stencil = 0) override;
 	void setViewport(float x, float y, float width, float height) override;

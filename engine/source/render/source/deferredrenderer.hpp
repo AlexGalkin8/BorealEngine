@@ -55,6 +55,12 @@ private:
 		uint32_t index_count = 0;
 	};
 
+	struct StaticMeshDraw
+	{
+		const RenderMesh& mesh;
+		CameraObjectConstants constants;
+	};
+
 	struct PrimitiveCacheEntry
 	{
 		uint32_t mesh_index = 0;
@@ -70,14 +76,16 @@ private:
 	void initResizableTextures(uint32_t width, uint32_t height);
 	void initPipelineStates();
 
-	void GBufferPass(const scene::Scene& scene, const scene::Camera& camera, ITexture& output_target);
-
-	using StaticMeshBucket = std::vector<const scene::StaticMeshActor*>;
-	StaticMeshBucket buildStaticMeshBucket(const scene::Scene& scene) const;
+	using StaticMeshBucket = std::vector<StaticMeshDraw>;
+	void depthPrepass(const StaticMeshBucket& bucket, ITexture& depth_texture);
+	void baseColorPass(const StaticMeshBucket& bucket, ITexture& depth_texture, ITexture& output_target);
+	void drawStaticMeshes(ICommandList& command_list, const StaticMeshBucket& bucket, bool bind_base_color) const;
+	StaticMeshBucket buildStaticMeshBucket(const scene::Scene& scene, const scene::Camera& camera);
 	const RenderMesh* getOrCreateRenderMesh(const scene::MeshHandle& mesh);
 
 private:
-	IPipelineState* mesh_pipeline_state_ = nullptr;
+	IPipelineState* depth_prepass_pipeline_state_ = nullptr;
+	IPipelineState* base_color_pipeline_state_ = nullptr;
 
 	ITexture* depth_texture_ = nullptr;
 	ITexture* default_white_texture_ = nullptr;

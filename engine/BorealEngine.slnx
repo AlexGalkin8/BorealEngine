@@ -36,6 +36,8 @@
   </Folder>
   <Folder Name="/shaders/">
     <File Path="shaders/base.hlsl" />
+    <File Path="shaders/depth_prepass.hlsl" />
+    <File Path="shaders/mesh_transform.hlsli" />
     <File Path="shaders/static_samplers.hlsli" />
   </Folder>
   <Folder Name="/third_party/">
