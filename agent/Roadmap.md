@@ -38,3 +38,7 @@ Add metrics and debug views alongside passes. Target RTX 3060, i7-8700K, 16 GB R
 reference scene with recorded quality settings; do not claim success without measurements.
 Render graphs, async compute, Vulkan, ECS, physics and scripting require concrete needs.
 Update milestone status only with links to tasks and actual verification results.
+
+Add [RenderDoc launch support](tasks/009-renderdoc-launch.md) first. Follow it
+with a separate Microsoft PIX integration that reuses the
+[command-line argument parser](tasks/008-command-line-arguments.md).

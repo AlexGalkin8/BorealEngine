@@ -8,6 +8,9 @@
 | [004 — renderer resource lifetime](004-render-resource-lifetime.md) | Complete. User verified sample shutdown on 2026-11-21. |
 | [005 — window resize](005-window-resize.md) | Builds and resize smoke check passed. Visual and D3D12 Output checks pending. |
 | [006 — engine logging](006-engine-logging.md) | Implemented. Release resize diagnostics verified. |
+| [007 — depth prepass](007-depth-prepass.md) | Implemented for opaque meshes. Resize, GPU readback and D3D12 validation passed. |
+| [008 — command-line arguments](008-command-line-arguments.md) | Implemented. Parser and sample startup verified. |
+| [009 — RenderDoc launch](009-renderdoc-launch.md) | Planned. Depends on command-line argument handling. |
 
 Document substantial tasks that benefit from continuity across chats, not every
 minor edit. File name: `NNN-short-topic.md`. Keep the table current.
