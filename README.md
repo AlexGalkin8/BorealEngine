@@ -75,7 +75,12 @@ Use the checked-in solution. `scripts/generate_sln.bat` invokes CMake, but the r
 
 The executable is built under `samples/BorealSample1/build/bin/x64/<Configuration>/`. Launching it directly still requires `samples/BorealSample1` as the working directory.
 
-The sample reads `data/settings.json`, which selects the scene and input configuration. The default scene is `data/scenes/default_scene/default_scene.json`; its model names resolve under `data/scenes/default_scene/models/`. Keep referenced model files and their external resources available.
+The sample reads `data/settings.json` and starts in `test_pbr_material`, a
+glTF material test scene, with PBR lighting enabled by default. Press **F1 → Scene** to switch to `pbr_materials_test`
+for the metallic sphere grid or `pudge_lighting` for a textured character
+under directional and point lights. Scene definitions live in
+`data/scenes/<scene>/<scene>.json` and resolve model paths from the scene's
+`models` directory when `scene_path` names that scene.
 
 ### Tools
 

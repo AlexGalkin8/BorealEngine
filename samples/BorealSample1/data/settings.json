@@ -1,7 +1,7 @@
 {
   "engine": [
     { "data_root_path"    : "data"          },
-    { "default_scene_name": "default_scene" },
+    { "default_scene_name": "test_pbr_material" },
     { "input_config_name" : "input"         },
     { "window_name"       : "BorealEngine"  },
     { "window_width"      : 1280            },

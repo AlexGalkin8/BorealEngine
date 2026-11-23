@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="source">
@@ -14,6 +14,8 @@
     <None Include=".gitignore" />
     <None Include="data\settings.json" />
     <None Include="data\input.json" />
-    <None Include="data\scenes\default_scene\default_scene.json" />
+    <None Include="data\scenes\pbr_materials_test\pbr_materials_test.json" />
+    <None Include="data\scenes\pudge_lighting\pudge_lighting.json" />
+    <None Include="data\scenes\test_pbr_material\test_pbr_material.json" />
   </ItemGroup>
 </Project>

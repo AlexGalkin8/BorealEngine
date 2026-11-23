@@ -99,7 +99,9 @@
   <ItemGroup>
     <None Include=".gitignore" />
     <None Include="data\input.json" />
-    <None Include="data\scenes\default_scene\default_scene.json" />
+    <None Include="data\scenes\pbr_materials_test\pbr_materials_test.json" />
+    <None Include="data\scenes\pudge_lighting\pudge_lighting.json" />
+    <None Include="data\scenes\test_pbr_material\test_pbr_material.json" />
     <None Include="data\settings.json" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

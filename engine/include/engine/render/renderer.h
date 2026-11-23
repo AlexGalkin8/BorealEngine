@@ -49,7 +49,7 @@ struct RenderSettings
 	uint32_t render_width = 0;
 	uint32_t render_height = 0;
 	EDebugRenderView debug_view = EDebugRenderView::kFinal;
-	ELightingModel lighting_model = ELightingModel::kDiffuse;
+	ELightingModel lighting_model = ELightingModel::kPBR;
 };
 
 

@@ -1,6 +1,6 @@
 {
-  "name": "default_scene",
-  "scene_path": "default_scene",
+  "name": "pudge_lighting",
+  "scene_path": "pudge_lighting",
   "models": [
     {
       "name": "pudge.glb",
@@ -8,6 +8,14 @@
       "scale": [1.0, 1.0, 1.0],
       "rotation_euler_degrees": [0.0, 0.0, 0.0]
     }
+  ],
+  "directional_light": {
+    "direction_to_light": [0.36, 0.48, -0.8],
+    "color": [1.0, 0.88, 0.75],
+    "intensity": 2.0
+  },
+  "point_lights": [
+    { "position": [-0.8, 0.9, -0.5], "color": [0.25, 0.55, 1.0], "intensity": 0.8, "radius": 2.0 }
   ],
   "camera": {
     "type": "fps",
