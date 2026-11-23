@@ -209,7 +209,7 @@ std::unique_ptr<IBuffer> D3D12RenderDevice::createBuffer(const IBuffer::Desc& de
 }
 
 
-ICommandList& D3D12RenderDevice::acquireCommandList(ECommandListType type, const std::string& name)
+ICommandList& D3D12RenderDevice::acquireCommandList(ECommandListType type, const std::string& name, uint32_t descriptor_count)
 {
 	D3D12CommandList* command_list = nullptr;
 
@@ -231,9 +231,9 @@ ICommandList& D3D12RenderDevice::acquireCommandList(ECommandListType type, const
 	}
 
 	D3D12CommandList::DescriptorRange descriptor_range = {};
-	descriptor_range.allocation = getCbvSrvUavDescriptorHeap()->allocateContiguous(kCommandListReservedDescriptorCount);
+	descriptor_range.capacity = descriptor_count > 0 ? descriptor_count : kCommandListReservedDescriptorCount;
+	descriptor_range.allocation = getCbvSrvUavDescriptorHeap()->allocateContiguous(descriptor_range.capacity);
 	ASSERT_MSG_RETURN(descriptor_range.isValid(), *command_list, "D3D12RenderDevice: failed to reserve descriptor range for command list");
-	descriptor_range.capacity = kCommandListReservedDescriptorCount;
 	descriptor_range.offset = 0;
 
 	command_list->beginRecording(descriptor_range);

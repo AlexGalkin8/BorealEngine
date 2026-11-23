@@ -19,6 +19,7 @@ struct LoadedMeshData
 		float normal[3];
 		float tangent[4];
 		float normal_texcoord[2];
+		float metallic_roughness_texcoord[2];
 	};
 
 	std::vector<Vertex> vertices;
@@ -43,6 +44,7 @@ struct LoadedMaterialData
 	std::string name;
 	int32_t base_color_texture_index = -1;
 	int32_t normal_texture_index = -1;
+	int32_t metallic_roughness_texture_index = -1;
 	float normal_scale = 1.0f;
 	float roughness_factor = 1.0f;
 	float metallic_factor = 1.0f;

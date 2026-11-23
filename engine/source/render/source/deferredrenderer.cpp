@@ -23,6 +23,7 @@ namespace render {
 
 static constexpr ETextureFormat kGBufferBaseColorFormat = ETextureFormat::kRGBA8_Unorm_Srgb;
 static constexpr ETextureFormat kGBufferNormalFormat = ETextureFormat::kRGBA16_Float;
+static constexpr uint32_t kGBufferMaterialTextureCount = 3;
 static constexpr ETextureFormat kGBufferMaterialFormat = ETextureFormat::kRG8_Unorm;
 static constexpr ETextureFormat kSceneLightingFormat = ETextureFormat::kRGBA16_Float;
 
@@ -327,7 +328,8 @@ void DeferredRenderer::initPipelineStates()
 	gbuffer_desc.input_layout_state.addAttribute(ESemanticType::kNormal, ETextureFormat::kRGB32_Float);
 	gbuffer_desc.input_layout_state.addAttribute(ESemanticType::kTangent, ETextureFormat::kRGBA32_Float);
 	gbuffer_desc.input_layout_state.addAttribute(ESemanticType::kTexCoord, ETextureFormat::kRG32_Float);
-	gbuffer_desc.resource_layout_state[1] = RootParameter::makeDescriptorTable({ DescriptorRange{ DescriptorType::kSRV, 0, 2 } });
+	gbuffer_desc.input_layout_state.addAttribute(ESemanticType::kTexCoord, ETextureFormat::kRG32_Float);
+	gbuffer_desc.resource_layout_state[1] = RootParameter::makeDescriptorTable({ DescriptorRange{ DescriptorType::kSRV, 0, kGBufferMaterialTextureCount } });
 	gbuffer_desc.resource_layout_state[2] = RootParameter::makeConstants32Bits(1, sizeof(MaterialConstants) / sizeof(uint32_t), 0);
 	gbuffer_desc.output_merger_state.addRenderTarget(kGBufferBaseColorFormat);
 	gbuffer_desc.output_merger_state.addRenderTarget(kGBufferNormalFormat);
@@ -370,7 +372,8 @@ void DeferredRenderer::depthPrepass(const StaticMeshBucket& bucket, ITexture& de
 
 void DeferredRenderer::gBufferPass(const StaticMeshBucket& bucket, ITexture& depth_texture)
 {
-	ICommandList& command_list = render_device_.acquireCommandList(ECommandListType::kDirect, "GBufferPass");
+	const uint32_t descriptor_count = static_cast<uint32_t>(bucket.size()) * kGBufferMaterialTextureCount;
+	ICommandList& command_list = render_device_.acquireCommandList(ECommandListType::kDirect, "GBufferPass", descriptor_count);
 	command_list.transitionTexture(*gbuffer_base_color_, EResourceState::kShaderResource, EResourceState::kRenderTarget);
 	command_list.transitionTexture(*gbuffer_normal_, EResourceState::kShaderResource, EResourceState::kRenderTarget);
 	command_list.transitionTexture(*gbuffer_material_, EResourceState::kShaderResource, EResourceState::kRenderTarget);
@@ -481,7 +484,8 @@ void DeferredRenderer::drawStaticMeshes(ICommandList& command_list, const Static
 		if (bind_material)
 		{
 			command_list.setDescriptorSet(1, { DescriptorResource::textureSRV(draw.mesh.base_color_texture),
-				DescriptorResource::textureSRV(draw.mesh.normal_texture) });
+				DescriptorResource::textureSRV(draw.mesh.normal_texture),
+				DescriptorResource::textureSRV(draw.mesh.metallic_roughness_texture) });
 			command_list.setGraphicsRoot32BitConstants(2, sizeof(MaterialConstants) / sizeof(uint32_t), &draw.mesh.material);
 		}
 		command_list.setVertexBuffer(*draw.mesh.vertex_buffer, draw.mesh.vertex_stride);
@@ -569,14 +573,17 @@ const DeferredRenderer::RenderMesh* DeferredRenderer::getOrCreateRenderMesh(cons
 						ETextureFormat::kRGBA8_Unorm_Srgb);
 				}
 			}
-			const int32_t normal_index = material.normal_texture_index;
-			if (normal_index >= 0 && static_cast<size_t>(normal_index) < loaded_textures.size())
+			const int32_t linear_texture_indices[] = { material.normal_texture_index, material.metallic_roughness_texture_index };
+			for (const int32_t index : linear_texture_indices)
 			{
-				ITexture*& texture = loaded_textures[normal_index].normal;
-				if (!texture)
+				if (index >= 0 && static_cast<size_t>(index) < loaded_textures.size())
 				{
-					texture = createTextureFromLoadedTextureData(render_device_, loaded_model.textures[normal_index],
-						ETextureFormat::kRGBA8_Unorm);
+					ITexture*& texture = loaded_textures[index].linear;
+					if (!texture)
+					{
+						texture = createTextureFromLoadedTextureData(render_device_, loaded_model.textures[index],
+							ETextureFormat::kRGBA8_Unorm);
+					}
 				}
 			}
 		}
@@ -598,6 +605,7 @@ const DeferredRenderer::RenderMesh* DeferredRenderer::getOrCreateRenderMesh(cons
 	gpu_data.index_count = static_cast<uint32_t>(loaded_mesh.indices.size());
 	gpu_data.base_color_texture = default_white_texture_;
 	gpu_data.normal_texture = default_white_texture_;
+	gpu_data.metallic_roughness_texture = default_white_texture_;
 
 	auto materials_it = file_materials_cache_.find(mesh.resource_path);
 	auto textures_it = file_textures_cache_.find(mesh.resource_path);
@@ -622,11 +630,21 @@ const DeferredRenderer::RenderMesh* DeferredRenderer::getOrCreateRenderMesh(cons
 			}
 			if (material.normal_texture_index >= 0 && static_cast<size_t>(material.normal_texture_index) < textures.size())
 			{
-				ITexture* texture = textures[material.normal_texture_index].normal;
+				ITexture* texture = textures[material.normal_texture_index].linear;
 				if (texture)
 				{
 					gpu_data.normal_texture = texture;
 					gpu_data.material.normal_scale = material.normal_scale;
+				}
+			}
+			const int32_t metallic_roughness_index = material.metallic_roughness_texture_index;
+			if (metallic_roughness_index >= 0 && static_cast<size_t>(metallic_roughness_index) < textures.size())
+			{
+				ITexture* texture = textures[metallic_roughness_index].linear;
+				if (texture)
+				{
+					gpu_data.metallic_roughness_texture = texture;
+					gpu_data.material.has_metallic_roughness_texture = 1;
 				}
 			}
 		}

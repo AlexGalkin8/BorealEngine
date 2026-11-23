@@ -52,6 +52,7 @@ private:
 		float normal_scale = 0.0f;
 		float roughness_factor = 1.0f;
 		float metallic_factor = 1.0f;
+		uint32_t has_metallic_roughness_texture = 0;
 	};
 
 	struct RenderMesh
@@ -60,6 +61,7 @@ private:
 		IBuffer* index_buffer = nullptr;
 		ITexture* base_color_texture = nullptr;
 		ITexture* normal_texture = nullptr;
+		ITexture* metallic_roughness_texture = nullptr;
 		MaterialConstants material;
 		uint32_t vertex_stride = 0;
 		uint32_t index_count = 0;
@@ -82,7 +84,7 @@ private:
 	struct MaterialTextures
 	{
 		ITexture* base_color = nullptr;
-		ITexture* normal = nullptr;
+		ITexture* linear = nullptr;
 	};
 
 private:

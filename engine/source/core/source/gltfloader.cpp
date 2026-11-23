@@ -174,13 +174,22 @@ static LoadedMeshData loadPrimitiveFromModel(const tinygltf3::Model& model, cons
 
     const tg3_accessor* texcoord_accessor = findAttributeAccessor(model, primitive, "TEXCOORD_0");
     const tg3_accessor* normal_texcoord_accessor = nullptr;
+    const tg3_accessor* metallic_roughness_texcoord_accessor = nullptr;
     if (primitive.material >= 0 && static_cast<uint32_t>(primitive.material) < model->materials_count)
     {
-        const tg3_normal_texture_info& normal_texture = model->materials[primitive.material].normal_texture;
+        const tg3_material& material = model->materials[primitive.material];
+        const tg3_normal_texture_info& normal_texture = material.normal_texture;
         if (normal_texture.index >= 0)
         {
             const std::string attribute_name = "TEXCOORD_" + std::to_string(normal_texture.tex_coord);
             normal_texcoord_accessor = findAttributeAccessor(model, primitive, attribute_name.c_str());
+        }
+
+        const tg3_texture_info& metallic_roughness_texture = material.pbr_metallic_roughness.metallic_roughness_texture;
+        if (metallic_roughness_texture.index >= 0)
+        {
+            const std::string attribute_name = "TEXCOORD_" + std::to_string(metallic_roughness_texture.tex_coord);
+            metallic_roughness_texcoord_accessor = findAttributeAccessor(model, primitive, attribute_name.c_str());
         }
     }
 
@@ -191,6 +200,8 @@ static LoadedMeshData loadPrimitiveFromModel(const tinygltf3::Model& model, cons
         &model->buffer_views[position_accessor->buffer_view]);
     const VertexAttributeData texcoord = resolveVertexAttribute(model, texcoord_accessor, TG3_TYPE_VEC2, position_accessor->count);
     const VertexAttributeData normal_texcoord = resolveVertexAttribute(model, normal_texcoord_accessor, TG3_TYPE_VEC2, position_accessor->count);
+    const VertexAttributeData metallic_roughness_texcoord = resolveVertexAttribute(
+        model, metallic_roughness_texcoord_accessor, TG3_TYPE_VEC2, position_accessor->count);
     const VertexAttributeData normal = resolveVertexAttribute(
         model, findAttributeAccessor(model, primitive, "NORMAL"), TG3_TYPE_VEC3, position_accessor->count);
     const VertexAttributeData tangent = resolveVertexAttribute(
@@ -209,6 +220,7 @@ static LoadedMeshData loadPrimitiveFromModel(const tinygltf3::Model& model, cons
 
         readTexcoord(texcoord, i, dst_vertex.texcoord);
         readTexcoord(normal_texcoord, i, dst_vertex.normal_texcoord);
+        readTexcoord(metallic_roughness_texcoord, i, dst_vertex.metallic_roughness_texcoord);
         if (normal.data && normal.component_type == TG3_COMPONENT_TYPE_FLOAT)
         {
             std::memcpy(dst_vertex.normal, normal.data + normal.stride * i, sizeof(dst_vertex.normal));
@@ -366,6 +378,7 @@ static void fillTexturesAndMaterials(const tinygltf3::Model& model, LoadedModelD
 		material_data.name = material.name.data ? material.name.data : "";
 		material_data.base_color_texture_index = material.pbr_metallic_roughness.base_color_texture.index;
 		material_data.normal_texture_index = material.normal_texture.index;
+		material_data.metallic_roughness_texture_index = material.pbr_metallic_roughness.metallic_roughness_texture.index;
 		material_data.normal_scale = static_cast<float>(material.normal_texture.scale);
 		material_data.roughness_factor = static_cast<float>(material.pbr_metallic_roughness.roughness_factor);
 		material_data.metallic_factor = static_cast<float>(material.pbr_metallic_roughness.metallic_factor);

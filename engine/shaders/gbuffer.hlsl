@@ -1,8 +1,10 @@
 #include "static_samplers.hlsli"
 #include "mesh_transform.hlsli"
+#include "shader_constants.hlsli"
 
 Texture2D<float4> gBaseColorTexture : register(t0);
 Texture2D<float4> gNormalTexture : register(t1);
+Texture2D<float4> gMetallicRoughnessTexture : register(t2);
 
 cbuffer MaterialCB : register(b1)
 {
@@ -10,6 +12,7 @@ cbuffer MaterialCB : register(b1)
     float gNormalScale;
     float gRoughnessFactor;
     float gMetallicFactor;
+    uint gHasMetallicRoughnessTexture;
 }
 
 struct VS_INPUT
@@ -20,6 +23,7 @@ struct VS_INPUT
     float3 normal : NORMAL0;
     float4 tangent : TANGENT0;
     float2 normal_texcoord : TEXCOORD1;
+    float2 metallic_roughness_texcoord : TEXCOORD2;
 };
 
 struct VS_OUTPUT
@@ -30,6 +34,7 @@ struct VS_OUTPUT
     float2 normal_texcoord : TEXCOORD2;
     float3 world_normal : TEXCOORD3;
     float4 world_tangent : TEXCOORD4;
+    float2 metallic_roughness_texcoord : TEXCOORD5;
     float4 color : COLOR0;
 };
 
@@ -47,6 +52,7 @@ VS_OUTPUT vertexShader(VS_INPUT input)
     output.texcoord = input.texcoord;
     output.world_position = mul(gWorld, float4(input.position, 1.0)).xyz;
     output.normal_texcoord = input.normal_texcoord;
+    output.metallic_roughness_texcoord = input.metallic_roughness_texcoord;
     const float3 world_x = mul(gWorld, float4(1.0, 0.0, 0.0, 0.0)).xyz;
     const float3 world_y = mul(gWorld, float4(0.0, 1.0, 0.0, 0.0)).xyz;
     const float3 world_z = mul(gWorld, float4(0.0, 0.0, 1.0, 0.0)).xyz;
@@ -68,7 +74,7 @@ float3 getWorldNormal(VS_OUTPUT input)
     const float2 uv_dy = ddy(input.normal_texcoord);
     const float3 geometric_normal = cross(position_dx, position_dy);
     const float3 base_normal = dot(input.world_normal, input.world_normal) > 0.0
-        ? normalize(input.world_normal) : geometric_normal * rsqrt(max(dot(geometric_normal, geometric_normal), 1e-30));
+        ? normalize(input.world_normal) : geometric_normal * rsqrt(max(dot(geometric_normal, geometric_normal), kMinGeometricNormalLengthSquared));
     const float facing = dot(base_normal, geometric_normal) < 0.0 ? -1.0 : 1.0;
     if (gNormalScale == 0.0)
     {
@@ -105,5 +111,9 @@ GBUFFER_OUTPUT pixelShader(VS_OUTPUT input)
     output.base_color = float4(gBaseColorTexture.Sample(gLinearWrapSampler, input.texcoord).rgb * input.color.rgb * gBaseColorFactor.rgb, 1.0);
     output.world_normal = float4(getWorldNormal(input), 0.0);
     output.material = float2(gRoughnessFactor, gMetallicFactor);
+    if (gHasMetallicRoughnessTexture != 0)
+    {
+        output.material *= gMetallicRoughnessTexture.Sample(gLinearWrapSampler, input.metallic_roughness_texcoord).gb;
+    }
     return output;
 }

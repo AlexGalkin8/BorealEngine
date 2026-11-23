@@ -125,8 +125,15 @@ Validate by reprojecting known points after a camera move and resize.
 
 The opaque G-buffer multiplies sampled albedo and vertex color by the glTF
 base color factor. Its linear RG8_UNORM material target stores roughness in R
-and metallic in G. This stage reads scalar factors. Sampling the glTF
-metallic-roughness texture and evaluating the PBR BRDF are follow-up work.
+and metallic in G. When a glTF metallic-roughness map is present, the
+G-buffer samples it as linear data using the material's UV set, then
+multiplies G by the roughness factor and B by the metallic factor.
+Materials without a map use their scalar factors directly.
+
+The `test_pbr_material` scene includes four primitives with embedded
+metallic-roughness maps. Debug GPU readback verified independent G and B
+channel variation, scalar multiplication, and the Roughness and Metallic
+debug outputs. The scalar-only groups retained their expected values.
 
 Open F1 > Scene > pbr_materials_test in BorealSample1, or start it from its sample directory with
 `--settings data/pbr_materials_test_settings.json`. The test scene opts into

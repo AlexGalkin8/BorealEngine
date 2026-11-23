@@ -28,7 +28,7 @@ public:
 
 
 	// Command list management
-	ICommandList& acquireCommandList(ECommandListType type, const std::string& name) override;
+	ICommandList& acquireCommandList(ECommandListType type, const std::string& name, uint32_t descriptor_count = 0) override;
 	void submitCommandList(ICommandList& command_list) override;
 	FenceValue executeCommandLists(ECommandListType type) override;
 
