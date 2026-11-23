@@ -37,6 +37,10 @@
   <Folder Name="/shaders/">
     <File Path="shaders/base.hlsl" />
     <File Path="shaders/depth_prepass.hlsl" />
+    <File Path="shaders/blinn_phong_lighting.hlsli" />
+    <File Path="shaders/brdf.hlsli" />
+    <File Path="shaders/diffuse_lighting.hlsli" />
+    <File Path="shaders/pbr_lighting.hlsli" />
     <File Path="shaders/deferred_lighting.hlsl" />
     <File Path="shaders/fullscreen_triangle.hlsli" />
     <File Path="shaders/gbuffer.hlsl" />
@@ -44,6 +48,8 @@
     <File Path="shaders/imgui.hlsl" />
     <File Path="shaders/postprocess.hlsl" />
     <File Path="shaders/mesh_transform.hlsli" />
+    <File Path="shaders/shader_constants.hlsli" />
+    <File Path="shaders/space_transform.hlsli" />
     <File Path="shaders/static_samplers.hlsli" />
   </Folder>
   <Folder Name="/third_party/">

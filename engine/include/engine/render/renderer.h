@@ -37,11 +37,19 @@ enum class EDebugRenderView : uint32_t
 	kMetallic = 5,
 };
 
+enum class ELightingModel : uint32_t
+{
+	kDiffuse = 0,
+	kBlinnPhong = 1,
+	kPBR = 2,
+};
+
 struct RenderSettings
 {
 	uint32_t render_width = 0;
 	uint32_t render_height = 0;
 	EDebugRenderView debug_view = EDebugRenderView::kFinal;
+	ELightingModel lighting_model = ELightingModel::kDiffuse;
 };
 
 
@@ -55,6 +63,8 @@ public:
 
 	const RenderSettings& getRenderSettings() const { return render_settings_; }
 	void setDebugView(EDebugRenderView view) { render_settings_.debug_view = view; }
+
+	void setLightingModel(ELightingModel model) { render_settings_.lighting_model = model; }
 
 	virtual void resize(uint32_t width, uint32_t height) = 0;
 

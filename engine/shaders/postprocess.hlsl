@@ -1,4 +1,5 @@
 #include "fullscreen_triangle.hlsli"
+#include "shader_constants.hlsli"
 
 Texture2D<float4> gSceneLighting : register(t0);
 Texture2D<float4> gAlbedo : register(t1);
@@ -13,8 +14,8 @@ cbuffer Postprocess : register(b0)
 
 float3 encodeSrgb(float3 linear_color)
 {
-    return lerp(12.92 * linear_color,
-        1.055 * pow(linear_color, 1.0 / 2.4) - 0.055, step(0.0031308, linear_color));
+    return lerp(kSrgbLinearScale * linear_color, kSrgbPowerScale * pow(linear_color, kSrgbExponent) - kSrgbPowerOffset,
+        step(kSrgbLinearThreshold, linear_color));
 }
 
 float4 pixelShader(float4 position : SV_POSITION) : SV_Target

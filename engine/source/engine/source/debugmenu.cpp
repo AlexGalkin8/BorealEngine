@@ -99,6 +99,28 @@ std::string DebugMenu::draw(scene::Scene& scene, render::IRenderer& renderer)
 			ImGui::MenuItem("Directional light", nullptr, &show_directional_light_);
 			ImGui::MenuItem("Point lights", nullptr, &show_point_lights_);
 			ImGui::MenuItem("Rendering statistics", nullptr, &show_rendering_stats_);
+			if (ImGui::BeginMenu("Lighting model"))
+			{
+				using render::ELightingModel;
+				struct LightingModel
+				{
+					const char* label;
+					ELightingModel model;
+				};
+				static constexpr LightingModel kLightingModels[] = {
+					{ "Diffuse", ELightingModel::kDiffuse },
+					{ "Blinn-Phong", ELightingModel::kBlinnPhong },
+					{ "PBR", ELightingModel::kPBR },
+				};
+				for (const LightingModel& lighting : kLightingModels)
+				{
+					if (ImGui::MenuItem(lighting.label, nullptr, render_settings.lighting_model == lighting.model))
+					{
+						renderer.setLightingModel(lighting.model);
+					}
+				}
+				ImGui::EndMenu();
+			}
 			if (ImGui::BeginMenu("Debug view"))
 			{
 				using render::EDebugRenderView;

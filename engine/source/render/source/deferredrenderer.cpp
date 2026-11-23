@@ -29,9 +29,9 @@ static constexpr ETextureFormat kSceneLightingFormat = ETextureFormat::kRGBA16_F
 struct DirectionalLightConstants
 {
 	float direction_to_light[3];
-	float direction_padding;
+	ELightingModel lighting_model;
 	float light_gain[3];
-	float gain_padding;
+	uint32_t has_directional_light;
 };
 
 struct PointLightConstants
@@ -47,7 +47,7 @@ struct LightingConstants
 	DirectionalLightConstants directional;
 	math::Matrix4x4 inverse_view_projection;
 	uint32_t point_light_count;
-	uint32_t padding[3];
+	float camera_position[3];
 	PointLightConstants point_lights[scene::kMaxPointLights];
 };
 
@@ -338,7 +338,7 @@ void DeferredRenderer::initPipelineStates()
 
 	GraphicsPipelineDesc lighting_desc = {};
 	lighting_desc.shader_state.shader_name = "deferred_lighting";
-	lighting_desc.resource_layout_state[0] = RootParameter::makeDescriptorTable({ DescriptorRange{ DescriptorType::kSRV, 0, 3 } });
+	lighting_desc.resource_layout_state[0] = RootParameter::makeDescriptorTable({ DescriptorRange{ DescriptorType::kSRV, 0, 4 } });
 	lighting_desc.resource_layout_state[1] = RootParameter::makeConstants32Bits(0, sizeof(LightingConstants) / sizeof(uint32_t));
 	lighting_desc.output_merger_state.addRenderTarget(kSceneLightingFormat);
 	lighting_desc.output_merger_state.depth_stencil.depth_enable = false;
@@ -390,18 +390,24 @@ void DeferredRenderer::gBufferPass(const StaticMeshBucket& bucket, ITexture& dep
 void DeferredRenderer::deferredLightingPass(const scene::Scene& scene, const scene::Camera& camera, ITexture& depth_texture)
 {
 	const scene::DirectionalLight& light = scene.getDirectionalLight();
-	const math::Vector3 direction = light.direction_to_light.lengthSq() > 0.0f
-		? light.direction_to_light.normalize() : math::Vector3(0.0f, 0.0f, 0.0f);
-	const float intensity = light.enabled ? std::max(light.intensity, 0.0f) : 0.0f;
 	LightingConstants constants = {};
-	constants.directional = {
-		{ direction.x, direction.y, direction.z }, 0.0f,
-		{ std::max(light.color.x, 0.0f) * intensity,
-		  std::max(light.color.y, 0.0f) * intensity,
-		  std::max(light.color.z, 0.0f) * intensity }, 0.0f,
-	};
+	constants.directional.lighting_model = render_settings_.lighting_model;
+	if (light.enabled && light.intensity > 0.0f && light.direction_to_light.lengthSq() > 0.0f)
+	{
+		const math::Vector3 direction = light.direction_to_light.normalize();
+		constants.directional = {
+			{ direction.x, direction.y, direction.z }, render_settings_.lighting_model,
+			{ std::max(light.color.x, 0.0f) * light.intensity,
+			  std::max(light.color.y, 0.0f) * light.intensity,
+			  std::max(light.color.z, 0.0f) * light.intensity }, 1,
+		};
+	}
 
 	constants.inverse_view_projection = buildInverseViewProjection(camera);
+	const math::Vector3& camera_position = camera.getPosition();
+	constants.camera_position[0] = camera_position.x;
+	constants.camera_position[1] = camera_position.y;
+	constants.camera_position[2] = camera_position.z;
 	for (const scene::PointLight& point : scene.getPointLights())
 	{
 		if (constants.point_light_count == scene::kMaxPointLights)
@@ -429,7 +435,8 @@ void DeferredRenderer::deferredLightingPass(const scene::Scene& scene, const sce
 	command_list.setPipelineState(*deferred_lighting_pipeline_state_);
 	setFullscreenViewport(command_list, lighting_target);
 	command_list.setDescriptorSet(0, { DescriptorResource::textureSRV(gbuffer_base_color_),
-		DescriptorResource::textureSRV(gbuffer_normal_), DescriptorResource::textureSRV(&depth_texture) });
+		DescriptorResource::textureSRV(gbuffer_normal_), DescriptorResource::textureSRV(&depth_texture),
+		DescriptorResource::textureSRV(gbuffer_material_) });
 	command_list.setGraphicsRoot32BitConstants(1, sizeof(LightingConstants) / sizeof(uint32_t), &constants);
 	command_list.draw(3, 0);
 	command_list.transitionTexture(lighting_target, EResourceState::kRenderTarget, EResourceState::kShaderResource);
