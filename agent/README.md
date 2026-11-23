@@ -1,8 +1,11 @@
 # BorealEngine project materials
 
 Durable instructions live in [agent/AGENTS.md](AGENTS.md).
-This location is not the repository-root discovery entry point. For a new chat,
-explicitly ask the agent to read agent/AGENTS.md before starting work.
+All agent configuration stays in this directory. Start agent sessions with this
+directory as the working directory: Claude Code then loads CLAUDE.md (which
+imports AGENTS.md) and .claude/settings.json, and `claude.bat` does this for you.
+Codex finds AGENTS.md here the same way. If an agent was started elsewhere,
+explicitly ask it to read agent/AGENTS.md before starting work.
 This directory preserves project context and substantial task results across chats.
 It does not contain automatically launched agents. Write all materials in English.
 
