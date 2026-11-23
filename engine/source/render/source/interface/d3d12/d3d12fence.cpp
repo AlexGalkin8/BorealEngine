@@ -30,21 +30,24 @@ FenceValue D3D12Fence::getCompletedValue() const
 
 FenceValue D3D12Fence::signalOnCpu()
 {
-	D3D12_ASSERT_RETURN(fence_->Signal(next_signal_value_), kInvalidFenceValue);
+	const std::lock_guard<std::mutex> lock(signal_mutex_);
+	D3D12_ASSERT_RETURN(fence_->Signal(getNextSignalValue()), kInvalidFenceValue);
 	return next_signal_value_++;
 }
 
 
 FenceValue D3D12Fence::signalOnGpu(ID3D12CommandQueue* command_queue)
 {
-	D3D12_ASSERT_RETURN(command_queue->Signal(fence_, next_signal_value_), kInvalidFenceValue);
+	const std::lock_guard<std::mutex> lock(signal_mutex_);
+	D3D12_ASSERT_RETURN(command_queue->Signal(fence_, getNextSignalValue()), kInvalidFenceValue);
 	return next_signal_value_++;
 }
 
 
 void D3D12Fence::waitValueOnCpu(FenceValue value)
 {
-	ASSERT_MSG_RETURN_VOID(value < next_signal_value_, "Wait value has already passed. value=%ull, next_signal_value_=%ull", value, next_signal_value_);
+	ASSERT_MSG_RETURN_VOID(value < getNextSignalValue(), "Fence value has not been signaled");
+	const std::lock_guard<std::mutex> lock(wait_mutex_);
 	if (fence_->GetCompletedValue() < value)
 	{
 		D3D12_ASSERT_RETURN_VOID(fence_->SetEventOnCompletion(value, event_handle_));
@@ -55,7 +58,7 @@ void D3D12Fence::waitValueOnCpu(FenceValue value)
 
 void D3D12Fence::waitValueOnGpu(uint64_t value, ID3D12CommandQueue* commandQueue) const
 {
-	ASSERT_MSG_RETURN_VOID(value < next_signal_value_, "Wait value has already passed. value=%ull, next_signal_value_=%ull", value, next_signal_value_);
+	ASSERT_MSG_RETURN_VOID(value < getNextSignalValue(), "Fence value has not been signaled");
 	D3D12_ASSERT_RETURN_VOID(commandQueue->Wait(fence_, value));
 }
 

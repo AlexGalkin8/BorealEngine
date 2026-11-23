@@ -3,6 +3,9 @@
 
 #include <engine/core/utility/assert.h>
 
+#include <algorithm>
+#include <iterator>
+
 
 namespace render {
 
@@ -157,141 +160,114 @@ void D3D12DescriptorHeap::reset()
 }
 
 
-std::unique_ptr<D3D12DescriptorRingBuffer> D3D12DescriptorRingBuffer::create(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t capacity)
+std::unique_ptr<D3D12ShaderVisibleDescriptorHeap> D3D12ShaderVisibleDescriptorHeap::create(
+	ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t capacity)
 {
 	D3D12_DESCRIPTOR_HEAP_DESC desc = {};
 	desc.Type = type;
 	desc.NumDescriptors = capacity;
 	desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-	desc.NodeMask = 0;
 
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> heap;
 	D3D12_ASSERT_RETURN_NULL(device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&heap)));
 
 	const uint32_t descriptor_size = device->GetDescriptorHandleIncrementSize(type);
-	return std::unique_ptr<D3D12DescriptorRingBuffer>(new D3D12DescriptorRingBuffer(heap.Detach(), capacity, descriptor_size));
+	return std::unique_ptr<D3D12ShaderVisibleDescriptorHeap>(
+		new D3D12ShaderVisibleDescriptorHeap(std::move(heap), capacity, descriptor_size));
 }
 
 
-D3D12DescriptorRingBuffer::D3D12DescriptorRingBuffer(ID3D12DescriptorHeap* heap, uint32_t capacity, uint32_t descriptor_size)
-	: RingBufferBase<uint32_t>(capacity)
-	, heap_(heap)
-	, heap_capacity_(capacity)
+D3D12ShaderVisibleDescriptorHeap::Allocation D3D12ShaderVisibleDescriptorHeap::allocate(uint32_t count)
+{
+	ASSERT_MSG_RETURN_EMPTY(count > 0, "A descriptor table must contain at least one descriptor");
+	const std::lock_guard<std::mutex> lock(mutex_);
+	auto range_it = std::find_if(free_ranges_.begin(), free_ranges_.end(), [count](const Range& range)
+	{
+		return range.count >= count;
+	});
+	if (range_it == free_ranges_.end())
+	{
+		return {};
+	}
+
+	const uint32_t index = range_it->index;
+	range_it->index += count;
+	range_it->count -= count;
+	if (range_it->count == 0)
+	{
+		free_ranges_.erase(range_it);
+	}
+
+	return { { index, count }, makeCpuHandle(heap_.Get(), descriptor_size_, index),
+		makeGpuHandle(heap_.Get(), descriptor_size_, index) };
+}
+
+
+void D3D12ShaderVisibleDescriptorHeap::retire(std::span<const Range> ranges, ECommandListType queue, FenceValue fence_value)
+{
+	if (ranges.empty())
+	{
+		return;
+	}
+
+	const std::lock_guard<std::mutex> lock(mutex_);
+	std::queue<RetiredRange>& retired = retired_ranges_[static_cast<size_t>(queue)];
+	for (const Range& range : ranges)
+	{
+		retired.push({ range, fence_value });
+	}
+}
+
+
+void D3D12ShaderVisibleDescriptorHeap::reclaim(ECommandListType queue, FenceValue completed_fence_value)
+{
+	// A removed device reports UINT64_MAX and cannot prove that work completed.
+	if (completed_fence_value == UINT64_MAX)
+	{
+		return;
+	}
+
+	const std::lock_guard<std::mutex> lock(mutex_);
+	std::queue<RetiredRange>& retired = retired_ranges_[static_cast<size_t>(queue)];
+	while (!retired.empty() && retired.front().fence_value <= completed_fence_value)
+	{
+		releaseRange(retired.front().range);
+		retired.pop();
+	}
+}
+
+
+D3D12ShaderVisibleDescriptorHeap::D3D12ShaderVisibleDescriptorHeap(
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>&& heap, uint32_t capacity, uint32_t descriptor_size)
+	: heap_(std::move(heap))
+	, capacity_(capacity)
 	, descriptor_size_(descriptor_size)
+	, free_ranges_({ { 0, capacity } })
+{}
+
+
+void D3D12ShaderVisibleDescriptorHeap::releaseRange(const Range& range)
 {
-}
+	auto next = std::lower_bound(free_ranges_.begin(), free_ranges_.end(), range.index,
+		[](const Range& free_range, uint32_t index) { return free_range.index < index; });
 
-
-D3D12DescriptorRingBuffer::D3D12DescriptorRingBuffer(D3D12DescriptorRingBuffer&& other) noexcept
-	: RingBufferBase<uint32_t>()
-	, heap_(other.heap_)
-	, heap_capacity_(other.heap_capacity_)
-	, descriptor_size_(other.descriptor_size_)
-{
-	moveStateFrom(other);
-	other.heap_ = nullptr;
-	other.heap_capacity_ = 0;
-	other.descriptor_size_ = 0;
-}
-
-
-D3D12DescriptorRingBuffer& D3D12DescriptorRingBuffer::operator=(D3D12DescriptorRingBuffer&& other) noexcept
-{
-	if (this != &other)
+	Range merged = range;
+	if (next != free_ranges_.begin())
 	{
-		D3D12_SAFE_RELEASE(heap_);
-
-		heap_ = other.heap_;
-		heap_capacity_ = other.heap_capacity_;
-		descriptor_size_ = other.descriptor_size_;
-
-		moveStateFrom(other);
-		other.heap_ = nullptr;
-		other.heap_capacity_ = 0;
-		other.descriptor_size_ = 0;
+		const auto previous = std::prev(next);
+		if (previous->index + previous->count == merged.index)
+		{
+			merged.index = previous->index;
+			merged.count += previous->count;
+			next = free_ranges_.erase(previous);
+		}
 	}
-	return *this;
-}
-
-
-D3D12DescriptorRingBuffer::~D3D12DescriptorRingBuffer()
-{
-	D3D12_SAFE_RELEASE(heap_);
-}
-
-
-D3D12_CPU_DESCRIPTOR_HANDLE D3D12DescriptorRingBuffer::cpuAt(uint32_t descriptor_index) const
-{
-	if (descriptor_index >= heap_capacity_)
+	if (next != free_ranges_.end() && merged.index + merged.count == next->index)
 	{
-		return {};
+		merged.count += next->count;
+		next = free_ranges_.erase(next);
 	}
-
-	return makeCpuHandle(heap_, descriptor_size_, descriptor_index);
-}
-
-
-D3D12_GPU_DESCRIPTOR_HANDLE D3D12DescriptorRingBuffer::gpuAt(uint32_t descriptor_index) const
-{
-	if (descriptor_index >= heap_capacity_)
-	{
-		return {};
-	}
-
-	return makeGpuHandle(heap_, descriptor_size_, descriptor_index);
-}
-
-
-D3D12DescriptorRingBuffer::Allocation D3D12DescriptorRingBuffer::allocate()
-{
-	uint32_t descriptor_index = UINT32_MAX;
-	ASSERT_MSG_RETURN(tryAllocate(&descriptor_index, 1, 1), Allocation{}, "D3D12DescriptorRingBuffer: ring heap is out of descriptors");
-
-	Allocation alloc{};
-	alloc.index = descriptor_index;
-	alloc.cpu = cpuAt(descriptor_index);
-	alloc.gpu = gpuAt(descriptor_index);
-	return alloc;
-}
-
-
-D3D12DescriptorRingBuffer::Allocation D3D12DescriptorRingBuffer::allocateContiguous(uint32_t count)
-{
-	ASSERT_MSG_RETURN(count > 0, Allocation{}, "D3D12DescriptorRingBuffer::allocateContiguous(): count must be > 0");
-
-	uint32_t descriptor_index = UINT32_MAX;
-	ASSERT_MSG_RETURN(tryAllocate(&descriptor_index, count, 1), Allocation{}, "D3D12DescriptorRingBuffer: not enough contiguous space in ring buffer");
-
-	Allocation alloc{};
-	alloc.index = descriptor_index;
-	alloc.cpu = cpuAt(descriptor_index);
-	alloc.gpu = gpuAt(descriptor_index);
-	return alloc;
-}
-
-
-void D3D12DescriptorRingBuffer::addPendingFrame(uint64_t fence_value)
-{
-	RingBufferBase<uint32_t>::addPendingFrame(fence_value);
-}
-
-
-void D3D12DescriptorRingBuffer::freeCompleted(uint64_t completed_fence_value)
-{
-	RingBufferBase<uint32_t>::freeCompleted(completed_fence_value);
-}
-
-
-void D3D12DescriptorRingBuffer::beginFrame(uint32_t frame_index, uint32_t frame_count)
-{
-	(void)frame_index;
-	(void)frame_count;
-}
-
-
-void D3D12DescriptorRingBuffer::reset()
-{
-	resetRing();
+	free_ranges_.insert(next, merged);
 }
 
 }  // namespace render

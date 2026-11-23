@@ -2,6 +2,7 @@
 
 #include "interface/common.h"
 
+#include <atomic>
 #include <memory>
 
 
@@ -21,7 +22,7 @@ public:
 	template<ERenderAPI render_api>
 	static std::unique_ptr<IFence> create(IRenderDevice& render_device);
 
-	FenceValue getNextSignalValue() const { return next_signal_value_; }
+	FenceValue getNextSignalValue() const { return next_signal_value_.load(); }
 
 	virtual FenceValue getCompletedValue() const = 0;
 
@@ -35,7 +36,7 @@ protected:
 	IFence();
 
 protected:
-	FenceValue next_signal_value_;
+	std::atomic<FenceValue> next_signal_value_;
 };
 
 }  // namespace render

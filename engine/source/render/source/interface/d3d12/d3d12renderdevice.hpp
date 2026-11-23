@@ -28,7 +28,7 @@ public:
 
 
 	// Command list management
-	ICommandList& acquireCommandList(ECommandListType type, const std::string& name, uint32_t descriptor_count = 0) override;
+	ICommandList& acquireCommandList(ECommandListType type, const std::string& name) override;
 	void submitCommandList(ICommandList& command_list) override;
 	FenceValue executeCommandLists(ECommandListType type) override;
 
@@ -47,7 +47,9 @@ public:
 	D3D12DescriptorHeap* getRtvDescriptorHeap() const { return rtv_descriptor_heap_.get(); }
 	D3D12DescriptorHeap* getDsvDescriptorHeap() const { return dsv_descriptor_heap_.get(); }
 	D3D12DescriptorHeap* getCbvSrvUavCpuDescriptorHeap() const { return cbv_srv_uav_cpu_descriptor_heap_.get(); }
-	D3D12DescriptorRingBuffer* getCbvSrvUavDescriptorHeap() const { return cbv_srv_uav_descriptor_heap_.get(); }
+	D3D12ShaderVisibleDescriptorHeap* getCbvSrvUavDescriptorHeap() const { return cbv_srv_uav_descriptor_heap_.get(); }
+
+	D3D12ShaderVisibleDescriptorHeap::Allocation allocateShaderDescriptors(uint32_t count);
 
 	~D3D12RenderDevice() override;
 
@@ -67,7 +69,7 @@ private:
 	std::unique_ptr<D3D12DescriptorHeap> rtv_descriptor_heap_;
 	std::unique_ptr<D3D12DescriptorHeap> dsv_descriptor_heap_;
 	std::unique_ptr<D3D12DescriptorHeap> cbv_srv_uav_cpu_descriptor_heap_;
-	std::unique_ptr<D3D12DescriptorRingBuffer> cbv_srv_uav_descriptor_heap_;
+	std::unique_ptr<D3D12ShaderVisibleDescriptorHeap> cbv_srv_uav_descriptor_heap_;
 
 	std::unique_ptr<D3D12CommandQueue<ECommandListType::kDirect>>  direct_queue_;
 	std::unique_ptr<D3D12CommandQueue<ECommandListType::kCompute>> compute_queue_;

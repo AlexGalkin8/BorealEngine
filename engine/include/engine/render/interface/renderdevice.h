@@ -50,7 +50,8 @@ public:
 	virtual std::unique_ptr<ISwapChain> createSwapChain(const platform::IWindow& window) = 0;
 
 	// Commamd list management
-	virtual ICommandList& acquireCommandList(ECommandListType type, const std::string& name, uint32_t descriptor_count = 0) = 0;
+	// Separate command lists may be recorded concurrently. Each list has one recording thread at a time.
+	virtual ICommandList& acquireCommandList(ECommandListType type, const std::string& name) = 0;
 	virtual void submitCommandList(ICommandList& command_list) = 0;
 	virtual FenceValue executeCommandLists(ECommandListType type) = 0;
 

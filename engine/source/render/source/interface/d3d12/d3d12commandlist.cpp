@@ -10,6 +10,8 @@
 #include "interface/commandlist.h"
 #include "interface/swapchain.h"
 
+#include <engine/core/utility/log.h>
+
 
 namespace render {
 
@@ -66,22 +68,24 @@ std::unique_ptr<D3D12CommandList> D3D12CommandList::create(IRenderDevice& render
 
 // Frame ---------------------------------------------------------------------
 
-void D3D12CommandList::beginRecording(DescriptorRange descriptor_range)
+void D3D12CommandList::beginRecording()
 {
 	ASSERT_MSG_RETURN_VOID(!is_recording_, "CommandList: begin() called while already recording");
-	ASSERT_MSG_RETURN_VOID(descriptor_range.isValid(), "CommandList: descriptor range is invalid");
+	ASSERT_MSG_RETURN_VOID(descriptor_tables_.empty(), "CommandList: descriptor tables were not retired");
 
 	D3D12_ASSERT_RETURN_VOID(command_allocator_->Reset());
 	D3D12_ASSERT_RETURN_VOID(command_list_->Reset(command_allocator_, nullptr));
 
-	reserved_srv_range_ = descriptor_range;
-	reserved_srv_range_.offset = 0;
-
-	D3D12RenderDevice& render_device = getRenderDevice();
-	ID3D12DescriptorHeap* descriptor_heaps[] = {
-		render_device.getCbvSrvUavDescriptorHeap()->getHeap()
-	};
-	command_list_->SetDescriptorHeaps(_countof(descriptor_heaps), descriptor_heaps);
+	graphics_root_signature_ = nullptr;
+	failed_descriptor_tables_.reset();
+	descriptor_exhaustion_logged_ = false;
+	if (type_ != ECommandListType::kCopy)
+	{
+		ID3D12DescriptorHeap* descriptor_heaps[] = {
+			getRenderDevice().getCbvSrvUavDescriptorHeap()->getHeap()
+		};
+		command_list_->SetDescriptorHeaps(_countof(descriptor_heaps), descriptor_heaps);
+	}
 
 	is_recording_ = true;
 }
@@ -92,7 +96,6 @@ void D3D12CommandList::endRecording()
 	ASSERT_MSG_RETURN_VOID(is_recording_, "CommandList: end() called without begin()");
 	D3D12_ASSERT_RETURN_VOID(command_list_->Close());
 	is_recording_ = false;
-	reserved_srv_range_.reset();
 }
 
 
@@ -211,7 +214,13 @@ void D3D12CommandList::setScissorRect(int32_t left, int32_t top, int32_t right, 
 void D3D12CommandList::setPipelineState(IPipelineState& pipeline_state)
 {
 	D3D12GraphicsPipelineState& d3d12_pso = static_cast<D3D12GraphicsPipelineState&>(pipeline_state);
-	command_list_->SetGraphicsRootSignature(d3d12_pso.getRootSignature());
+	ID3D12RootSignature* root_signature = d3d12_pso.getRootSignature();
+	if (graphics_root_signature_ != root_signature)
+	{
+		failed_descriptor_tables_.reset();
+		graphics_root_signature_ = root_signature;
+	}
+	command_list_->SetGraphicsRootSignature(root_signature);
 	command_list_->SetPipelineState(d3d12_pso.getPipelineState());
 }
 
@@ -246,14 +255,28 @@ void D3D12CommandList::setGraphicsRoot32BitConstants(uint32_t root_parameter_ind
 void D3D12CommandList::setDescriptorSet(uint32_t root_parameter_index, std::initializer_list<DescriptorResource> resources)
 {
 	ASSERT_MSG_RETURN_VOID(is_recording_, "Called while not recording");
-	ASSERT_MSG_RETURN_VOID(!resources.size() || reserved_srv_range_.isValid(), "Descriptor range was not reserved");
-	ASSERT_MSG_RETURN_VOID(reserved_srv_range_.offset + resources.size() <= reserved_srv_range_.capacity, "Reserved descriptor range exhausted");
+	ASSERT_MSG_RETURN_VOID(root_parameter_index < failed_descriptor_tables_.size(), "Invalid descriptor table root index");
+	failed_descriptor_tables_.set(root_parameter_index);
+	ASSERT_MSG_RETURN_VOID(type_ != ECommandListType::kCopy && resources.size() > 0,
+		"Descriptor tables require a graphics or compute list and at least one descriptor");
 
 	D3D12RenderDevice& render_device = getRenderDevice();
-	D3D12DescriptorRingBuffer* descriptor_ring = render_device.getCbvSrvUavDescriptorHeap();
-	const uint32_t descriptor_size = descriptor_ring->getDescriptorSize();
-	const uint32_t descriptor_offset = reserved_srv_range_.offset;
+	const uint32_t count = static_cast<uint32_t>(resources.size());
+	const D3D12ShaderVisibleDescriptorHeap::Allocation allocation = render_device.allocateShaderDescriptors(count);
+	if (!allocation.isValid())
+	{
+		if (!descriptor_exhaustion_logged_)
+		{
+			LOG_WARNING("D3D12", "Command list '{}': unable to allocate {} contiguous shader-visible descriptors from a heap of {}.",
+				getName(), count, render_device.getCbvSrvUavDescriptorHeap()->getCapacity());
+			descriptor_exhaustion_logged_ = true;
+		}
+		return;
+	}
+	descriptor_tables_.push_back(allocation.range);
 
+	const uint32_t descriptor_size = render_device.getCbvSrvUavDescriptorHeap()->getDescriptorSize();
+	D3D12_CPU_DESCRIPTOR_HANDLE dst_handle = allocation.cpu;
 	for (const DescriptorResource& res : resources)
 	{
 		D3D12_CPU_DESCRIPTOR_HANDLE src_handle = {};
@@ -290,19 +313,21 @@ void D3D12CommandList::setDescriptorSet(uint32_t root_parameter_index, std::init
 			}
 		}
 
-		D3D12_CPU_DESCRIPTOR_HANDLE dst_handle = reserved_srv_range_.allocation.cpu;
-		dst_handle.ptr += static_cast<SIZE_T>(reserved_srv_range_.offset) * descriptor_size;
-
+		ASSERT_MSG_RETURN_VOID(src_handle.ptr != 0, "Descriptor set contains an invalid source view");
 		render_device.getD3D12Device()->CopyDescriptorsSimple(
-			1, dst_handle, src_handle,
-			D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
-		++reserved_srv_range_.offset;
+			1, dst_handle, src_handle, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		dst_handle.ptr += descriptor_size;
 	}
 
-	D3D12_GPU_DESCRIPTOR_HANDLE gpu_handle = reserved_srv_range_.allocation.gpu;
-	gpu_handle.ptr += static_cast<UINT64>(descriptor_offset) * descriptor_size;
-	command_list_->SetGraphicsRootDescriptorTable(root_parameter_index, gpu_handle);
+	if (type_ == ECommandListType::kCompute)
+	{
+		command_list_->SetComputeRootDescriptorTable(root_parameter_index, allocation.gpu);
+	}
+	else
+	{
+		command_list_->SetGraphicsRootDescriptorTable(root_parameter_index, allocation.gpu);
+	}
+	failed_descriptor_tables_.reset(root_parameter_index);
 }
 
 
@@ -351,15 +376,21 @@ void D3D12CommandList::drawIndexed(uint32_t index_count, uint32_t start_index_lo
 void D3D12CommandList::drawInstanced(uint32_t vertex_count_per_instance, uint32_t instance_count,
 	uint32_t start_vertex_location, uint32_t start_instance_location)
 {
-	command_list_->DrawInstanced(vertex_count_per_instance, instance_count, start_vertex_location, start_instance_location);
+	if (failed_descriptor_tables_.none())
+	{
+		command_list_->DrawInstanced(vertex_count_per_instance, instance_count, start_vertex_location, start_instance_location);
+	}
 }
 
 
 void D3D12CommandList::drawIndexedInstanced(uint32_t index_count_per_instance, uint32_t instance_count,
 	uint32_t start_index_location, int32_t base_vertex_location, uint32_t start_instance_location)
 {
-	command_list_->DrawIndexedInstanced(index_count_per_instance, instance_count,
-		start_index_location, base_vertex_location, start_instance_location);
+	if (failed_descriptor_tables_.none())
+	{
+		command_list_->DrawIndexedInstanced(index_count_per_instance, instance_count,
+			start_index_location, base_vertex_location, start_instance_location);
+	}
 }
 
 
@@ -381,7 +412,6 @@ D3D12CommandList::D3D12CommandList(
 	, command_list_(command_list)
 	, command_allocator_(command_allocator)
 	, fence_value_(0)
-	, reserved_srv_range_({})
 {}
 
 
@@ -390,6 +420,13 @@ D3D12CommandList::D3D12CommandList(
 D3D12RenderDevice& D3D12CommandList::getRenderDevice()
 {
 	return static_cast<D3D12RenderDevice&>(render_device_);
+}
+
+
+void D3D12CommandList::recordDescriptorTableUsage(FenceValue fence_value)
+{
+	getRenderDevice().getCbvSrvUavDescriptorHeap()->retire(descriptor_tables_, type_, fence_value);
+	descriptor_tables_.clear();
 }
 
 

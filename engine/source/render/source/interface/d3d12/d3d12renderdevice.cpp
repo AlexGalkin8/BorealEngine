@@ -173,7 +173,7 @@ std::unique_ptr<D3D12RenderDevice> D3D12RenderDevice::create(const CreationDesc&
 		D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
 		kD3D12SRVDescriptorCount);
 
-	render_device->cbv_srv_uav_descriptor_heap_ = D3D12DescriptorRingBuffer::create(
+	render_device->cbv_srv_uav_descriptor_heap_ = D3D12ShaderVisibleDescriptorHeap::create(
 		render_device->device_,
 		D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
 		kD3D12SRVDescriptorCount);
@@ -209,7 +209,7 @@ std::unique_ptr<IBuffer> D3D12RenderDevice::createBuffer(const IBuffer::Desc& de
 }
 
 
-ICommandList& D3D12RenderDevice::acquireCommandList(ECommandListType type, const std::string& name, uint32_t descriptor_count)
+ICommandList& D3D12RenderDevice::acquireCommandList(ECommandListType type, const std::string& name)
 {
 	D3D12CommandList* command_list = nullptr;
 
@@ -230,13 +230,7 @@ ICommandList& D3D12RenderDevice::acquireCommandList(ECommandListType type, const
 		break;
 	}
 
-	D3D12CommandList::DescriptorRange descriptor_range = {};
-	descriptor_range.capacity = descriptor_count > 0 ? descriptor_count : kCommandListReservedDescriptorCount;
-	descriptor_range.allocation = getCbvSrvUavDescriptorHeap()->allocateContiguous(descriptor_range.capacity);
-	ASSERT_MSG_RETURN(descriptor_range.isValid(), *command_list, "D3D12RenderDevice: failed to reserve descriptor range for command list");
-	descriptor_range.offset = 0;
-
-	command_list->beginRecording(descriptor_range);
+	command_list->beginRecording();
 	return *command_list;
 }
 
@@ -268,35 +262,11 @@ FenceValue D3D12RenderDevice::executeCommandLists(ECommandListType type)
 	switch (type)
 	{
 	case ECommandListType::kDirect:
-	{
-		const FenceValue fence_value = direct_queue_->executePendingCommandLists();
-		if (fence_value > 0)
-		{
-			cbv_srv_uav_descriptor_heap_->addPendingFrame(fence_value);
-			cbv_srv_uav_descriptor_heap_->freeCompleted(direct_queue_->getD3D12Fence().getCompletedValue());
-		}
-		return fence_value;
-	}
+		return direct_queue_->executePendingCommandLists();
 	case ECommandListType::kCompute:
-	{
-		const FenceValue fence_value = compute_queue_->executePendingCommandLists();
-		if (fence_value > 0)
-		{
-			cbv_srv_uav_descriptor_heap_->addPendingFrame(fence_value);
-			cbv_srv_uav_descriptor_heap_->freeCompleted(compute_queue_->getD3D12Fence().getCompletedValue());
-		}
-		return fence_value;
-	}
+		return compute_queue_->executePendingCommandLists();
 	case ECommandListType::kCopy:
-	{
-		const FenceValue fence_value = copy_queue_->executePendingCommandLists();
-		if (fence_value > 0)
-		{
-			cbv_srv_uav_descriptor_heap_->addPendingFrame(fence_value);
-			cbv_srv_uav_descriptor_heap_->freeCompleted(copy_queue_->getD3D12Fence().getCompletedValue());
-		}
-		return fence_value;
-	}
+		return copy_queue_->executePendingCommandLists();
 	}
 	return 0;
 }
@@ -313,6 +283,21 @@ void D3D12RenderDevice::waitGpuIdle()
 	if (direct_queue_) direct_queue_->waitGpuIdle();
 	if (compute_queue_) compute_queue_->waitGpuIdle();
 	if (copy_queue_) copy_queue_->waitGpuIdle();
+}
+
+
+D3D12ShaderVisibleDescriptorHeap::Allocation D3D12RenderDevice::allocateShaderDescriptors(uint32_t count)
+{
+	D3D12ShaderVisibleDescriptorHeap& heap = *cbv_srv_uav_descriptor_heap_;
+	D3D12ShaderVisibleDescriptorHeap::Allocation allocation = heap.allocate(count);
+	if (allocation.isValid() || count > heap.getCapacity())
+	{
+		return allocation;
+	}
+
+	heap.reclaim(ECommandListType::kDirect, direct_queue_->getD3D12Fence().getCompletedValue());
+	heap.reclaim(ECommandListType::kCompute, compute_queue_->getD3D12Fence().getCompletedValue());
+	return heap.allocate(count);
 }
 
 

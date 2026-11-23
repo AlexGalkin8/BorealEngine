@@ -372,8 +372,7 @@ void DeferredRenderer::depthPrepass(const StaticMeshBucket& bucket, ITexture& de
 
 void DeferredRenderer::gBufferPass(const StaticMeshBucket& bucket, ITexture& depth_texture)
 {
-	const uint32_t descriptor_count = static_cast<uint32_t>(bucket.size()) * kGBufferMaterialTextureCount;
-	ICommandList& command_list = render_device_.acquireCommandList(ECommandListType::kDirect, "GBufferPass", descriptor_count);
+	ICommandList& command_list = render_device_.acquireCommandList(ECommandListType::kDirect, "GBufferPass");
 	command_list.transitionTexture(*gbuffer_base_color_, EResourceState::kShaderResource, EResourceState::kRenderTarget);
 	command_list.transitionTexture(*gbuffer_normal_, EResourceState::kShaderResource, EResourceState::kRenderTarget);
 	command_list.transitionTexture(*gbuffer_material_, EResourceState::kShaderResource, EResourceState::kRenderTarget);

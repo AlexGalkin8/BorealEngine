@@ -2,16 +2,19 @@
 
 #include "interface/commandlist.h"
 #include "interface/fence.hpp"
+#include "interface/resourcelayoutstate.hpp"
 #include "d3d12descriptorheap.hpp"
 
-#include <array>
+#include <bitset>
 #include <memory>
 #include <initializer_list>
+#include <vector>
 
 
 struct ID3D12CommandAllocator;
 struct ID3D12GraphicsCommandList;
 struct ID3D12CommandQueue;
+struct ID3D12RootSignature;
 
 namespace render {
 class IRenderDevice;
@@ -28,24 +31,9 @@ class D3D12CommandList final : public ICommandList
 	template<ECommandListType> friend class D3D12CommandListPool;
 
 public:
-	struct DescriptorRange
-	{
-		D3D12DescriptorRingBuffer::Allocation allocation = {};
-		uint32_t capacity = 0;
-		uint32_t offset = 0;
-
-		bool isValid() const { return allocation.isValid(); }
-		void reset()
-		{
-			allocation = {};
-			capacity = 0;
-			offset = 0;
-		}
-	};
-
 	static std::unique_ptr<D3D12CommandList> create(IRenderDevice& render_device, ECommandListType type);
 
-	void beginRecording(DescriptorRange descriptor_range);
+	void beginRecording();
 	void endRecording();
 
 	ECommandListType getType() const { return type_; }
@@ -103,6 +91,8 @@ private:
 		ID3D12CommandAllocator* command_allocator);
 
 	D3D12RenderDevice& getRenderDevice();
+	// Keep descriptor tables allocated until the fence for this submission completes.
+	void recordDescriptorTableUsage(FenceValue fence_value);
 
 	void setGpuDebugName() override;
 
@@ -110,7 +100,10 @@ private:
 	ID3D12GraphicsCommandList* command_list_;
 	ID3D12CommandAllocator* command_allocator_;
 	FenceValue fence_value_;
-	DescriptorRange reserved_srv_range_;
+	std::vector<D3D12ShaderVisibleDescriptorHeap::Range> descriptor_tables_;
+	ID3D12RootSignature* graphics_root_signature_ = nullptr;
+	std::bitset<kMaxRootParameters> failed_descriptor_tables_;
+	bool descriptor_exhaustion_logged_ = false;
 };
 
 }  // namespace render

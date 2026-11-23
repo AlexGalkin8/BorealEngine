@@ -23,7 +23,6 @@ namespace render {
 
 inline constexpr uint32_t kD3D12RTVDescriptorCount = 1024;
 inline constexpr uint32_t kD3D12SRVDescriptorCount = 2048;
-inline constexpr uint32_t kCommandListReservedDescriptorCount = 128;
 
 
 #define D3D12_SAFE_RELEASE(obj) if (obj) { (obj)->Release(); (obj) = nullptr; }

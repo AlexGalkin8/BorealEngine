@@ -4,6 +4,7 @@
 #include "d3d12commandlistpool.hpp"
 
 #include <memory>
+#include <mutex>
 #include <vector>
 #include <algorithm>
 #include <iterator>
@@ -55,6 +56,7 @@ private:
 
 	std::unique_ptr<D3D12CommandListPool<kType>> command_list_pool_;
 
+	std::mutex submission_mutex_;
 	std::vector<std::reference_wrapper<D3D12CommandList>> pending_command_lists_;
 	std::vector<ID3D12CommandList*> d3d12_pending_command_lists_;
 };

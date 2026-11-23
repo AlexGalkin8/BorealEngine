@@ -3,11 +3,15 @@
 #include "d3d12common.hpp"
 
 #include <engine/core/utility/utility.h>
+#include <engine/render/interface/common.h>
 
+#include <array>
 #include <cstdint>
 #include <queue>
 #include <mutex>
 #include <memory>
+#include <span>
+#include <vector>
 
 
 struct ID3D12DescriptorHeap;
@@ -15,122 +19,6 @@ struct ID3D12Device;
 
 
 namespace render {
-
-// Generic fence-driven ring buffer for transient per-frame allocations.
-template<typename TIndex = uint32_t>
-class RingBufferBase
-{
-protected:
-	RingBufferBase() = default;
-	explicit RingBufferBase(TIndex capacity)
-		: capacity_(capacity)
-		, start_(0)
-		, end_(0)
-		, is_full_(false)
-	{
-	}
-
-	void moveStateFrom(RingBufferBase& other)
-	{
-		capacity_ = other.capacity_;
-		start_ = other.start_;
-		end_ = other.end_;
-		is_full_ = other.is_full_;
-		pending_frames_ = std::move(other.pending_frames_);
-
-		other.capacity_ = 0;
-		other.start_ = 0;
-		other.end_ = 0;
-		other.is_full_ = false;
-	}
-
-	void addPendingFrame(uint64_t fence_value)
-	{
-		pending_frames_.push({ fence_value, end_ });
-	}
-
-	void freeCompleted(uint64_t completed_fence_value)
-	{
-		while (!pending_frames_.empty() && pending_frames_.front().fence_value <= completed_fence_value)
-		{
-			start_ = pending_frames_.front().end;
-			pending_frames_.pop();
-			is_full_ = false;
-		}
-
-		if (start_ == end_ && !is_full_)
-		{
-			start_ = 0;
-			end_ = 0;
-		}
-	}
-
-	bool tryAllocate(TIndex* out_offset, TIndex allocation_size, TIndex align = 1)
-	{
-		if (out_offset == nullptr || allocation_size == 0 || allocation_size > capacity_)
-		{
-			return false;
-		}
-		if (is_full_)
-		{
-			return false;
-		}
-
-		TIndex aligned_end = (align > 1) ? ((end_ + (align - 1)) / align) * align : end_;
-
-		if (start_ <= aligned_end)
-		{
-			if (aligned_end > capacity_ || capacity_ - aligned_end < allocation_size)
-			{
-				if (start_ == 0)
-				{
-					return false;
-				}
-				aligned_end = 0;
-			}
-		}
-
-		if (start_ > aligned_end)
-		{
-			if (start_ - aligned_end < allocation_size)
-			{
-				return false;
-			}
-		}
-
-		*out_offset = aligned_end;
-		end_ = (aligned_end + allocation_size) % capacity_;
-		is_full_ = (start_ == end_);
-		return true;
-	}
-
-	void resetRing()
-	{
-		while (!pending_frames_.empty())
-		{
-			pending_frames_.pop();
-		}
-		start_ = 0;
-		end_ = 0;
-		is_full_ = false;
-	}
-
-	TIndex getCapacityValue() const { return capacity_; }
-
-private:
-	struct PendingFrame
-	{
-		uint64_t fence_value = 0;
-		TIndex end = 0;
-	};
-
-	TIndex capacity_ = 0;
-	TIndex start_ = 0;
-	TIndex end_ = 0;
-	bool is_full_ = false;
-	std::queue<PendingFrame> pending_frames_;
-};
-
 
 class D3D12DescriptorHeap final : public utility::NonCopyable
 {
@@ -175,48 +63,51 @@ private:
 };
 
 
-class D3D12DescriptorRingBuffer final : public utility::NonCopyable, protected RingBufferBase<uint32_t>
+class D3D12ShaderVisibleDescriptorHeap final : public utility::NonCopyable
 {
 public:
-	struct Allocation
+	struct Range
 	{
-		D3D12_CPU_DESCRIPTOR_HANDLE cpu = {};
-		D3D12_GPU_DESCRIPTOR_HANDLE gpu = {};
 		uint32_t index = UINT32_MAX;
-
-		bool isValid() const { return index != UINT32_MAX; }
+		uint32_t count = 0;
 	};
 
-	static std::unique_ptr<D3D12DescriptorRingBuffer> create(ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t capacity);
+	struct Allocation
+	{
+		Range range;
+		D3D12_CPU_DESCRIPTOR_HANDLE cpu = {};
+		D3D12_GPU_DESCRIPTOR_HANDLE gpu = {};
 
-	D3D12DescriptorRingBuffer() = default;
-	D3D12DescriptorRingBuffer(D3D12DescriptorRingBuffer&& other) noexcept;
-	D3D12DescriptorRingBuffer& operator=(D3D12DescriptorRingBuffer&& other) noexcept;
-	~D3D12DescriptorRingBuffer();
+		bool isValid() const { return range.count != 0; }
+	};
 
-	Allocation allocate();
-	Allocation allocateContiguous(uint32_t count);
+	static std::unique_ptr<D3D12ShaderVisibleDescriptorHeap> create(
+		ID3D12Device* device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t capacity);
 
-	void addPendingFrame(uint64_t fence_value);
-	void freeCompleted(uint64_t completed_fence_value);
-	void beginFrame(uint32_t frame_index, uint32_t frame_count);
+	Allocation allocate(uint32_t count);
+	void retire(std::span<const Range> ranges, ECommandListType queue, FenceValue fence_value);
+	void reclaim(ECommandListType queue, FenceValue completed_fence_value);
 
-	void reset();
-
-	ID3D12DescriptorHeap* getHeap() const { return heap_; }
+	ID3D12DescriptorHeap* getHeap() const { return heap_.Get(); }
 	uint32_t getDescriptorSize() const { return descriptor_size_; }
-	uint32_t getCapacity() const { return heap_capacity_; }
-
-	D3D12_CPU_DESCRIPTOR_HANDLE cpuAt(uint32_t descriptor_index) const;
-	D3D12_GPU_DESCRIPTOR_HANDLE gpuAt(uint32_t descriptor_index) const;
+	uint32_t getCapacity() const { return capacity_; }
 
 private:
-	D3D12DescriptorRingBuffer(ID3D12DescriptorHeap* heap, uint32_t capacity, uint32_t descriptor_size);
+	struct RetiredRange
+	{
+		Range range;
+		FenceValue fence_value;
+	};
 
-private:
-	ID3D12DescriptorHeap* heap_ = nullptr;
-	uint32_t heap_capacity_ = 0;
-	uint32_t descriptor_size_ = 0;
+	D3D12ShaderVisibleDescriptorHeap(Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>&& heap, uint32_t capacity, uint32_t descriptor_size);
+	void releaseRange(const Range& range);
+
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> heap_;
+	uint32_t capacity_;
+	uint32_t descriptor_size_;
+	std::vector<Range> free_ranges_;
+	std::array<std::queue<RetiredRange>, static_cast<size_t>(ECommandListType::kCopy) + 1> retired_ranges_;
+	std::mutex mutex_;
 };
 
 
@@ -283,20 +174,5 @@ private:
 	D3D12DescriptorHeap::Allocation allocation_ = {};
 };
 
-
-struct D3D12DescriptorRange final : utility::NonCopyable
-{
-	D3D12DescriptorRingBuffer::Allocation allocation = {};
-	uint32_t capacity = 0;
-	uint32_t offset = 0;
-
-	bool isValid() const { return allocation.isValid(); }
-	void reset()
-	{
-		allocation = {};
-		capacity = 0;
-		offset = 0;
-	}
-};
 
 }  // namespace render

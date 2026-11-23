@@ -3,6 +3,7 @@
 #include "interface/fence.hpp"
 
 #include <memory>
+#include <mutex>
 
 
 struct ID3D12Fence;
@@ -38,6 +39,8 @@ private:
 private:
     ID3D12Fence* fence_;
     HANDLE event_handle_;
+    std::mutex signal_mutex_;
+    std::mutex wait_mutex_;
 };
 
 }  // namespace render

@@ -53,6 +53,7 @@ std::unique_ptr<D3D12CommandQueue<kType>> D3D12CommandQueue<kType>::create(IRend
 template<ECommandListType kType>
 ICommandList& D3D12CommandQueue<kType>::acquireCommandList(const std::string& name)
 {
+	const std::lock_guard<std::mutex> lock(submission_mutex_);
 	return command_list_pool_->acquire(name);
 }
 
@@ -60,6 +61,7 @@ ICommandList& D3D12CommandQueue<kType>::acquireCommandList(const std::string& na
 template<ECommandListType kType>
 FenceValue D3D12CommandQueue<kType>::executePendingCommandLists()
 {
+	const std::lock_guard<std::mutex> lock(submission_mutex_);
 	if (d3d12_pending_command_lists_.empty())
 	{
 		return 0;
@@ -67,7 +69,11 @@ FenceValue D3D12CommandQueue<kType>::executePendingCommandLists()
 
 	command_queue_->ExecuteCommandLists(static_cast<UINT>(d3d12_pending_command_lists_.size()), d3d12_pending_command_lists_.data());
 	
-	FenceValue signal_value = fence_->signalOnGpu(command_queue_);
+	const FenceValue signal_value = fence_->signalOnGpu(command_queue_);
+	for (D3D12CommandList& command_list : pending_command_lists_)
+	{
+		command_list.recordDescriptorTableUsage(signal_value);
+	}
 	command_list_pool_->release(pending_command_lists_, signal_value);
 
 	pending_command_lists_.clear();
@@ -79,6 +85,7 @@ FenceValue D3D12CommandQueue<kType>::executePendingCommandLists()
 template<ECommandListType kType>
 void D3D12CommandQueue<kType>::addPendingCommandList(ICommandList& command_list)
 {
+	const std::lock_guard<std::mutex> lock(submission_mutex_);
 	D3D12CommandList& d3d12_command_list = static_cast<D3D12CommandList&>(command_list);
 	pending_command_lists_.push_back(d3d12_command_list);
 	d3d12_pending_command_lists_.push_back(d3d12_command_list.getD3D12CommandList());
@@ -95,8 +102,15 @@ void D3D12CommandQueue<kType>::waitValue(FenceValue value)
 template<ECommandListType kType>
 void D3D12CommandQueue<kType>::waitGpuIdle()
 {
-	FenceValue signal_value = static_cast<D3D12Fence*>(fence_.get())->signalOnGpu(command_queue_);
-	fence_->waitValueOnCpu(signal_value);
+	FenceValue signal_value;
+	{
+		const std::lock_guard<std::mutex> lock(submission_mutex_);
+		signal_value = fence_->signalOnGpu(command_queue_);
+	}
+	if (signal_value != kInvalidFenceValue)
+	{
+		fence_->waitValueOnCpu(signal_value);
+	}
 }
 
 
