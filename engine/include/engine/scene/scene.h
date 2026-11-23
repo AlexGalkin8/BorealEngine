@@ -22,7 +22,7 @@ public:
 	~Scene();
 
 	void draw();
-	void update(double dt);
+	void update(double dt, bool update_camera = true);
 
 	const std::string& getName() const { return name_; }
 

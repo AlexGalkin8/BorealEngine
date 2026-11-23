@@ -9,6 +9,9 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="source\debugmenu.h">
+      <Filter>source</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\include\engine\engine.h">
       <Filter>include</Filter>
     </ClInclude>
@@ -18,6 +21,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\engine.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="source\debugmenu.cpp">
       <Filter>source</Filter>
     </ClCompile>
     <ClCompile Include="source\commandlinehandler.cpp">

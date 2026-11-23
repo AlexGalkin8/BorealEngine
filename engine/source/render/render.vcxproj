@@ -63,7 +63,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <AdditionalIncludeDirectories>..\..\include\engine\render;..\..\include;source\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\include\engine\render;..\..\include;source\;..\..\third_party\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -80,7 +80,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc17</LanguageStandard_C>
-      <AdditionalIncludeDirectories>..\..\include\engine\render;..\..\include;source\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\include\engine\render;..\..\include;source\;..\..\third_party\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -88,6 +88,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\include\engine\render\imguibackend.h" />
     <ClInclude Include="..\..\include\engine\render\interface\buffer.h" />
     <ClInclude Include="..\..\include\engine\render\interface\commandlist.h" />
     <ClInclude Include="..\..\include\engine\render\interface\common.h" />
@@ -122,6 +123,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\deferredrenderer.cpp" />
+    <ClCompile Include="source\imguibackend.cpp" />
+    <ClCompile Include="..\..\third_party\imgui\imgui.cpp" />
+    <ClCompile Include="..\..\third_party\imgui\imgui_draw.cpp" />
+    <ClCompile Include="..\..\third_party\imgui\imgui_tables.cpp" />
+    <ClCompile Include="..\..\third_party\imgui\imgui_widgets.cpp" />
     <ClCompile Include="source\renderdoccapturer.cpp">
       <AdditionalIncludeDirectories>..\..\third_party\renderdoc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>

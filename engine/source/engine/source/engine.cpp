@@ -1,6 +1,7 @@
 #include "engine.h"
 
 #include "commandlinehandler.h"
+#include "debugmenu.h"
 
 #include <engine/core/utility/assert.h>
 #include <engine/platform/window.h>
@@ -11,6 +12,7 @@
 #include <engine/scene/sceneloader.h>
 #include <engine/render/interface/renderdevice.h>
 #include <engine/render/interface/swapchain.h>
+#include <engine/render/imguibackend.h>
 #include <engine/render/renderer.h>
 #include <engine/scene/common.h>
 
@@ -73,6 +75,10 @@ std::unique_ptr<Engine> Engine::create(const std::string& settings_file_name,
 	render_settings.render_height = engine->swap_chain_->getHeight();
 	engine->renderer_ = render::IRenderer::create<render::EShadingTechnique::kDeferred>(*engine->render_device_, render_settings);
 	ASSERT_MSG_RETURN_NULL(engine->renderer_ != nullptr, "Failed to create renderer");
+
+	engine->imgui_backend_ = render::ImGuiBackend::create(*engine->render_device_);
+	ASSERT_MSG_RETURN_NULL(engine->imgui_backend_ != nullptr, "Failed to initialize ImGui");
+	engine->debug_menu_ = std::make_unique<engine::DebugMenu>();
 
 	// Create default scene
 	{
@@ -194,18 +200,6 @@ void Engine::handleResize(uint32_t width, uint32_t height)
 }
 
 
-void Engine::setPauseOnFocusLost(bool enabled)
-{
-	pause_on_focus_lost_ = enabled;
-}
-
-
-bool Engine::isPauseOnFocusLost() const
-{
-	return pause_on_focus_lost_;
-}
-
-
 void Engine::stop()
 {
 	is_running_ = false;
@@ -239,7 +233,15 @@ void Engine::frame()
 	}
 
 	input_->update();
-	current_scene_->update(dt);
+	if (input_->isKeyPressed(platform::EKey::kF11))
+	{
+		window_->toggleFullscreen();
+		return;
+	}
+	if (input_->isKeyPressed(platform::EKey::kF1))
+	{
+		debug_menu_->toggle();
+	}
 
 	const render::RenderSettings& render_settings = renderer_->getRenderSettings();
 	if (swap_chain_->getWidth() != render_settings.render_width || swap_chain_->getHeight() != render_settings.render_height)
@@ -247,8 +249,22 @@ void Engine::frame()
 		return;
 	}
 
+	const uint32_t width = swap_chain_->getWidth();
+	const uint32_t height = swap_chain_->getHeight();
+	imgui_backend_->newFrame(*input_, width, height, static_cast<float>(dt));
+	if (debug_menu_->isVisible())
+	{
+		debug_menu_->draw(width, height, pause_on_focus_lost_, *render_device_);
+	}
+	const bool mouse_captured = debug_menu_->isVisible() && imgui_backend_->wantsMouse();
+	input_->setMouseLookEnabled(!mouse_captured);
+	const bool keyboard_captured = debug_menu_->isVisible() && imgui_backend_->wantsKeyboard();
+	current_scene_->update(dt, !mouse_captured && !keyboard_captured);
+
+	render::ITexture& back_buffer = swap_chain_->getCurrentBackBuffer();
 	render_device_->beginFrameCapture();
-	renderer_->render(*current_scene_, current_scene_->getCamera(), swap_chain_->getCurrentBackBuffer());
+	renderer_->render(*current_scene_, current_scene_->getCamera(), back_buffer);
+	imgui_backend_->draw(back_buffer);
 	swap_chain_->present();
 	render_device_->endFrameCapture();
 }

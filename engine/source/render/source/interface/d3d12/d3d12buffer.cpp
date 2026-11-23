@@ -134,7 +134,7 @@ std::unique_ptr<D3D12Buffer> D3D12Buffer::create(D3D12RenderDevice& render_devic
 
 void D3D12Buffer::upload(const void* data, size_t size)
 {
-	ASSERT_MSG_RETURN_VOID(size >= desc_.size, "D3D12Buffer::upload: size exceeds buffer capacity");
+	ASSERT_MSG_RETURN_VOID(data && size <= desc_.size, "D3D12Buffer::upload: invalid data or size exceeds buffer capacity");
 	void* mapped = nullptr;
 	D3D12_RANGE read_range{ 0, 0 };
 	D3D12_ASSERT_RETURN_VOID(resource_->Map(0, &read_range, &mapped));

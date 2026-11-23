@@ -22,6 +22,7 @@ public:
 	IBuffer* createBuffer(const IBuffer::Desc& desc);
 	ITexture* createTexture(const ITexture::Desc& desc);
 
+	void releaseBuffer(IBuffer& buffer);
 	void releaseTexture(ITexture& texture);
 
 	~GpuResourceManager();

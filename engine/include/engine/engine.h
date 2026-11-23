@@ -24,7 +24,13 @@ struct FrameCaptureSettings;
 class IRenderDevice;
 class IRenderer;
 class ISwapChain;
+class ImGuiBackend;
 }  // namespace render
+
+
+namespace engine {
+class DebugMenu;
+}  // namespace engine
 
 
 class Engine : public utility::NonCopyable
@@ -46,9 +52,6 @@ private:
 
 	void handleResize(uint32_t width, uint32_t height);
 
-	void setPauseOnFocusLost(bool enabled);
-	bool isPauseOnFocusLost() const;
-
 	void stop();
 	void pause();
 	void resume();
@@ -65,6 +68,8 @@ private:
 	std::unique_ptr<render::IRenderDevice> render_device_;
 	std::unique_ptr<render::ISwapChain> swap_chain_;
 	std::unique_ptr<render::IRenderer> renderer_;
+	std::unique_ptr<render::ImGuiBackend> imgui_backend_;
+	std::unique_ptr<engine::DebugMenu> debug_menu_;
 
 	std::vector<std::unique_ptr<scene::Scene>> scenes_;
 	scene::Scene* current_scene_ = nullptr;

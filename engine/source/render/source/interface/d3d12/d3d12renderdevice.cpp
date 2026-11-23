@@ -263,7 +263,7 @@ void D3D12RenderDevice::submitCommandList(ICommandList& command_list)
 	}
 }
 
-void D3D12RenderDevice::executeCommandLists(ECommandListType type)
+FenceValue D3D12RenderDevice::executeCommandLists(ECommandListType type)
 {
 	switch (type)
 	{
@@ -275,7 +275,7 @@ void D3D12RenderDevice::executeCommandLists(ECommandListType type)
 			cbv_srv_uav_descriptor_heap_->addPendingFrame(fence_value);
 			cbv_srv_uav_descriptor_heap_->freeCompleted(direct_queue_->getD3D12Fence().getCompletedValue());
 		}
-		break;
+		return fence_value;
 	}
 	case ECommandListType::kCompute:
 	{
@@ -285,7 +285,7 @@ void D3D12RenderDevice::executeCommandLists(ECommandListType type)
 			cbv_srv_uav_descriptor_heap_->addPendingFrame(fence_value);
 			cbv_srv_uav_descriptor_heap_->freeCompleted(compute_queue_->getD3D12Fence().getCompletedValue());
 		}
-		break;
+		return fence_value;
 	}
 	case ECommandListType::kCopy:
 	{
@@ -295,9 +295,16 @@ void D3D12RenderDevice::executeCommandLists(ECommandListType type)
 			cbv_srv_uav_descriptor_heap_->addPendingFrame(fence_value);
 			cbv_srv_uav_descriptor_heap_->freeCompleted(copy_queue_->getD3D12Fence().getCompletedValue());
 		}
-		break;
+		return fence_value;
 	}
 	}
+	return 0;
+}
+
+
+void D3D12RenderDevice::waitForDirectQueue(FenceValue value)
+{
+	direct_queue_->waitValue(value);
 }
 
 

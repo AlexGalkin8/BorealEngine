@@ -26,6 +26,15 @@ ITexture* GpuResourceManager::createTexture(const ITexture::Desc& desc)
 }
 
 
+void GpuResourceManager::releaseBuffer(IBuffer& buffer)
+{
+	const auto it = std::find_if(buffers_.begin(), buffers_.end(),
+		[&buffer](const std::unique_ptr<IBuffer>& owned) { return owned.get() == &buffer; });
+	ASSERT_MSG_RETURN_VOID(it != buffers_.end(), "Buffer is not owned by this manager");
+	buffers_.erase(it);
+}
+
+
 void GpuResourceManager::releaseTexture(ITexture& texture)
 {
 	const auto it = std::find_if(textures_.begin(), textures_.end(),

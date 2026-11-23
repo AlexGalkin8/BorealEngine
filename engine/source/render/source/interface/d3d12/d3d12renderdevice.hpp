@@ -30,9 +30,10 @@ public:
 	// Command list management
 	ICommandList& acquireCommandList(ECommandListType type, const std::string& name) override;
 	void submitCommandList(ICommandList& command_list) override;
-	void executeCommandLists(ECommandListType type) override;
+	FenceValue executeCommandLists(ECommandListType type) override;
 
 	// GPU synchronization
+	void waitForDirectQueue(FenceValue value) override;
 	void waitGpuIdle() override;
 
 	// D3D12-specific getters

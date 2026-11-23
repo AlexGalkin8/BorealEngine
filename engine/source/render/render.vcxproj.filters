@@ -21,6 +21,9 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\include\engine\render\imguibackend.h">
+      <Filter>include</Filter>
+    </ClInclude>
     <ClInclude Include="..\..\include\engine\render\interface\gpuresourcemanager.h">
       <Filter>include\interface</Filter>
     </ClInclude>
@@ -119,6 +122,13 @@
     <ClCompile Include="source\deferredrenderer.cpp">
       <Filter>source</Filter>
     </ClCompile>
+    <ClCompile Include="source\imguibackend.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\third_party\imgui\imgui.cpp" />
+    <ClCompile Include="..\..\third_party\imgui\imgui_draw.cpp" />
+    <ClCompile Include="..\..\third_party\imgui\imgui_tables.cpp" />
+    <ClCompile Include="..\..\third_party\imgui\imgui_widgets.cpp" />
     <ClCompile Include="source\renderdoccapturer.cpp">
       <Filter>source</Filter>
     </ClCompile>

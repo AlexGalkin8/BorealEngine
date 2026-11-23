@@ -25,9 +25,9 @@ void Scene::draw()
 }
 
 
-void Scene::update(double dt)
+void Scene::update(double dt, bool update_camera)
 {
-	if (camera_)
+	if (camera_ && update_camera)
 	{
 		camera_->update(dt);
 	}

@@ -52,12 +52,14 @@ public:
 	// Commamd list management
 	virtual ICommandList& acquireCommandList(ECommandListType type, const std::string& name) = 0;
 	virtual void submitCommandList(ICommandList& command_list) = 0;
-	virtual void executeCommandLists(ECommandListType type) = 0;
+	virtual FenceValue executeCommandLists(ECommandListType type) = 0;
 
 	// GPU synchronization
+	virtual void waitForDirectQueue(FenceValue value) = 0;
 	virtual void waitGpuIdle() = 0;
 
 	void requestFrameCapture();
+	bool hasFrameCapturer() const { return frame_capturer_ != nullptr; }
 	void beginFrameCapture();
 	void endFrameCapture();
 

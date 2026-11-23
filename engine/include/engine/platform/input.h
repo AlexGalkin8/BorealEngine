@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <vector>
 
 
@@ -86,6 +87,10 @@ public:
 
 	// Mouse delta in pixels since last update (only accumulated while RMB is held)
 	virtual void getMouseDelta(float& out_dx, float& out_dy) const = 0;
+	virtual bool getMousePosition(float& x, float& y) const = 0;
+	virtual float getMouseWheel() const = 0;
+	virtual std::u16string_view getTextInput() const = 0;
+	virtual void setMouseLookEnabled(bool enabled) = 0;
 
 	// High-level action queries (use action name from config)
 	virtual bool isActionDown(const std::string& action) const = 0;
@@ -97,5 +102,7 @@ public:
 
 // Called by the platform window's WindowProc on WM_INPUT to forward raw mouse deltas
 void notifyRawMouseInput(long dx, long dy);
+void notifyMouseWheel(float delta);
+void notifyTextInput(char16_t character);
 
 }  // namespace platform

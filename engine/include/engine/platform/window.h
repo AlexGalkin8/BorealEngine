@@ -50,10 +50,14 @@ public:
 	uint32_t getHeight() const;
 
 	void resize(uint32_t new_width, uint32_t new_height);
+	void toggleFullscreen();
 
 private:
+	struct WindowPlacement;
+
 	Desc desc_;
 	WindowHandle handle_;
+	std::unique_ptr<WindowPlacement> windowed_placement_;
 	bool has_pending_resize_ = false;
 };
 

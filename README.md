@@ -81,7 +81,7 @@ The sample reads `data/settings.json`, which selects the scene and input configu
 
 See the [tools guide](docs/tools.md) for command-line commands and GPU capture.
 
-### Camera controls
+### Controls
 
 | Action | Default input |
 |---|---|
@@ -90,6 +90,8 @@ See the [tools guide](docs/tools.md) for command-line commands and GPU capture.
 | Move up / down | E / Q |
 | Move faster | Hold Left Shift |
 | Look around | Hold right mouse button and move the mouse |
+| Toggle the debug menu and panels | F1 |
+| Toggle borderless fullscreen | F11 |
 
 Movement bindings, speed, sprint multiplier, and mouse sensitivity are configured in `samples/BorealSample1/data/input.json`. Mouse look is currently gated directly by the right mouse button in the Windows input implementation.
 

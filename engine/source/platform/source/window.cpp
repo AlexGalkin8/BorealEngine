@@ -10,6 +10,12 @@
 
 namespace platform {
 
+struct IWindow::WindowPlacement
+{
+	WINDOWPLACEMENT placement = { sizeof(WINDOWPLACEMENT) };
+	LONG_PTR style = 0;
+};
+
 static LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 std::unique_ptr<IWindow> IWindow::create(const Desc& desc)
@@ -167,10 +173,51 @@ void IWindow::resize(uint32_t new_width, uint32_t new_height)
 }
 
 
+void IWindow::toggleFullscreen()
+{
+	HWND hwnd = static_cast<HWND>(handle_);
+	if (windowed_placement_)
+	{
+		SetWindowLongPtrW(hwnd, GWL_STYLE, windowed_placement_->style);
+		const BOOL restored = SetWindowPlacement(hwnd, &windowed_placement_->placement);
+		SetWindowPos(hwnd, nullptr, 0, 0, 0, 0,
+			SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOOWNERZORDER);
+		ASSERT_MSG_RETURN_VOID(restored, "Failed to restore window placement");
+		windowed_placement_.reset();
+		return;
+	}
+
+	std::unique_ptr<WindowPlacement> saved = std::make_unique<WindowPlacement>();
+	ASSERT_MSG_RETURN_VOID(GetWindowPlacement(hwnd, &saved->placement), "Failed to get window placement");
+	MONITORINFO monitor = { sizeof(MONITORINFO) };
+	ASSERT_MSG_RETURN_VOID(GetMonitorInfoW(MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST), &monitor),
+		"Failed to get fullscreen monitor bounds");
+
+	saved->style = GetWindowLongPtrW(hwnd, GWL_STYLE);
+	SetWindowLongPtrW(hwnd, GWL_STYLE, (saved->style & ~(WS_OVERLAPPEDWINDOW | WS_MAXIMIZE)) | WS_POPUP);
+	const RECT& bounds = monitor.rcMonitor;
+	if (!SetWindowPos(hwnd, HWND_TOP, bounds.left, bounds.top,
+		bounds.right - bounds.left, bounds.bottom - bounds.top, SWP_FRAMECHANGED | SWP_NOOWNERZORDER))
+	{
+		SetWindowLongPtrW(hwnd, GWL_STYLE, saved->style);
+		SetWindowPlacement(hwnd, &saved->placement);
+		ASSERT_MSG(false, "Failed to enter fullscreen");
+		return;
+	}
+	windowed_placement_ = std::move(saved);
+}
+
+
 static LRESULT CALLBACK WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	switch (uMsg)
 	{
+	case WM_MOUSEWHEEL:
+		notifyMouseWheel(static_cast<float>(GET_WHEEL_DELTA_WPARAM(wParam)) / WHEEL_DELTA);
+		return 0;
+	case WM_CHAR:
+		notifyTextInput(static_cast<char16_t>(wParam));
+		return 0;
 	case WM_INPUT:
 	{
 		UINT size = 0;

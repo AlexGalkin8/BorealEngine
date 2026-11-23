@@ -238,6 +238,12 @@ public:
     bool isKeyReleased(EKey key) const override;
 
     void getMouseDelta(float& out_dx, float& out_dy) const override;
+    bool getMousePosition(float& x, float& y) const override;
+    float getMouseWheel() const override { return mouse_wheel_; }
+    std::u16string_view getTextInput() const override { return text_input_; }
+    void setMouseLookEnabled(bool enabled) override;
+    void accumulateMouseWheel(float delta) { pending_mouse_wheel_ += delta; }
+    void appendTextInput(char16_t character) { pending_text_input_.push_back(character); }
 
     bool isActionDown(const std::string& action) const override;
     bool isActionPressed(const std::string& action) const override;
@@ -261,6 +267,11 @@ private:
     float mouse_dy_ = 0.0f;
 
     bool rmb_was_down_ = false;
+    bool cursor_hidden_ = false;
+    float pending_mouse_wheel_ = 0.0f;
+    float mouse_wheel_ = 0.0f;
+    std::u16string pending_text_input_;
+    std::u16string text_input_;
 
     HWND hwnd_ = nullptr;
     std::unordered_map<std::string, EKey> action_map_;
@@ -280,13 +291,26 @@ void notifyRawMouseInput(long dx, long dy)
     accumulateRawMouseDelta(dx, dy);
 }
 
+void notifyMouseWheel(float delta)
+{
+    if (g_active_input)
+    {
+        g_active_input->accumulateMouseWheel(delta);
+    }
+}
+
+void notifyTextInput(char16_t character)
+{
+    if (g_active_input)
+    {
+        g_active_input->appendTextInput(character);
+    }
+}
+
 
 Win32Input::~Win32Input()
 {
-    if (hwnd_)
-    {
-        ShowCursor(TRUE);
-    }
+    setMouseLookEnabled(false);
     if (g_active_input == this)
     {
         g_active_input = nullptr;
@@ -342,11 +366,16 @@ bool Win32Input::init(const std::string& data_root_path, const std::string& conf
 void Win32Input::update()
 {
     previous_ = current_;
+    const bool is_focused = GetForegroundWindow() == hwnd_;
+    mouse_wheel_ = pending_mouse_wheel_;
+    pending_mouse_wheel_ = 0.0f;
+    text_input_.swap(pending_text_input_);
+    pending_text_input_.clear();
 
     for (uint32_t i = 0; i < kKeyCount; ++i)
     {
         const int vk = virtualKeyFromEKey(static_cast<EKey>(i));
-        current_[i] = (vk != 0) && ((GetAsyncKeyState(vk) & 0x8000) != 0);
+        current_[i] = is_focused && (vk != 0) && ((GetAsyncKeyState(vk) & 0x8000) != 0);
     }
 
     const bool rmb_down = current_[static_cast<uint32_t>(EKey::kMouseRight)];
@@ -354,7 +383,6 @@ void Win32Input::update()
     {
         if (!rmb_was_down_)
         {
-            ShowCursor(FALSE);
             // Discard first-frame delta to avoid jump on button press
             mouse_dx_ = 0.0f;
             mouse_dy_ = 0.0f;
@@ -367,10 +395,6 @@ void Win32Input::update()
     }
     else
     {
-        if (rmb_was_down_)
-        {
-            ShowCursor(TRUE);
-        }
         mouse_dx_ = 0.0f;
         mouse_dy_ = 0.0f;
     }
@@ -387,6 +411,29 @@ void Win32Input::getMouseDelta(float& out_dx, float& out_dy) const
 {
     out_dx = mouse_dx_;
     out_dy = mouse_dy_;
+}
+
+bool Win32Input::getMousePosition(float& x, float& y) const
+{
+    POINT position = {};
+    if (GetForegroundWindow() != hwnd_ || !GetCursorPos(&position) || !ScreenToClient(hwnd_, &position))
+    {
+        return false;
+    }
+    x = static_cast<float>(position.x);
+    y = static_cast<float>(position.y);
+    return true;
+}
+
+
+void Win32Input::setMouseLookEnabled(bool enabled)
+{
+    const bool hide_cursor = enabled && rmb_was_down_;
+    if (hide_cursor != cursor_hidden_)
+    {
+        ShowCursor(!hide_cursor);
+        cursor_hidden_ = hide_cursor;
+    }
 }
 
 
