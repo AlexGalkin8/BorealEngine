@@ -5,6 +5,7 @@
 
 namespace render {
 class IRenderDevice;
+class IRenderer;
 }  // namespace render
 
 
@@ -15,7 +16,8 @@ class DebugMenu
 public:
 	bool isVisible() const { return visible_; }
 	void toggle() { visible_ = !visible_; }
-	void draw(uint32_t width, uint32_t height, bool& pause_on_focus_lost, render::IRenderDevice& render_device);
+	void draw(uint32_t width, uint32_t height, bool& pause_on_focus_lost, render::IRenderDevice& render_device,
+		render::IRenderer& renderer);
 
 private:
 	bool visible_ = false;

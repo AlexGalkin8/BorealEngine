@@ -1,13 +1,15 @@
 #include "debugmenu.h"
 
 #include <engine/render/interface/renderdevice.h>
+#include <engine/render/renderer.h>
 
 #include <imgui.h>
 
 
 namespace engine {
 
-void DebugMenu::draw(uint32_t width, uint32_t height, bool& pause_on_focus_lost, render::IRenderDevice& render_device)
+void DebugMenu::draw(uint32_t width, uint32_t height, bool& pause_on_focus_lost, render::IRenderDevice& render_device,
+	render::IRenderer& renderer)
 {
 	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(9.0f, 5.0f));
 	ImGui::PushStyleColor(ImGuiCol_MenuBarBg, ImVec4(0.08f, 0.12f, 0.15f, 1.0f));
@@ -28,6 +30,29 @@ void DebugMenu::draw(uint32_t width, uint32_t height, bool& pause_on_focus_lost,
 		if (ImGui::BeginMenu("Render"))
 		{
 			ImGui::MenuItem("Rendering statistics", nullptr, &show_rendering_stats_);
+			if (ImGui::BeginMenu("Debug view"))
+			{
+				using render::EDebugRenderView;
+				struct View
+				{
+					const char* label;
+					EDebugRenderView mode;
+				};
+				static constexpr View kViews[] = {
+					{ "Final", EDebugRenderView::kFinal },
+					{ "G-buffer albedo", EDebugRenderView::kAlbedo },
+					{ "G-buffer world normals", EDebugRenderView::kWorldNormal },
+					{ "HDR lighting (clipped SDR)", EDebugRenderView::kLightingHDR },
+				};
+				for (const View& view : kViews)
+				{
+					if (ImGui::MenuItem(view.label, nullptr, renderer.getRenderSettings().debug_view == view.mode))
+					{
+						renderer.setDebugView(view.mode);
+					}
+				}
+				ImGui::EndMenu();
+			}
 			ImGui::EndMenu();
 		}
 		if (ImGui::BeginMenu("Engine"))

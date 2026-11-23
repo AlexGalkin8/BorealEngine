@@ -16,9 +16,10 @@ See the [prioritized backlog](Backlog.md) for candidate work by stage and the
 | [009 — RenderDoc capture](009-renderdoc-launch.md) | In-process capture and pass order verified. |
 | [010 — refactor capture-tool startup](010-capture-tool-refactor.md) | Planned. |
 | [011 — opaque G-buffer pass](011-gbuffer-pass.md) | Implemented. Capture and GPU readback verified. |
-| [012 — deferred directional lighting](012-deferred-directional-lighting.md) | In progress. C++ integration prepared; HLSL pending. |
+| [012 — deferred directional lighting](012-deferred-directional-lighting.md) | Implemented. Performance baseline pending. |
 | [013 — Dear ImGui integration](013-imgui-integration.md) | Implemented. RHI overlay, resize and input routing verified. |
 | [014 — Refactor the ImGui integration](014-imgui-refactor.md) | Planned. |
+| [016 — Postprocess and debug render views](016-postprocess-and-debug-views.md) | Implemented. |
 
 Document substantial tasks that benefit from continuity across chats, not every
 minor edit. File name: `NNN-short-topic.md`. Keep the table current.

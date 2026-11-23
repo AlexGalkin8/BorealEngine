@@ -37,9 +37,12 @@
   <Folder Name="/shaders/">
     <File Path="shaders/base.hlsl" />
     <File Path="shaders/depth_prepass.hlsl" />
+    <File Path="shaders/deferred_lighting.hlsl" />
+    <File Path="shaders/fullscreen_triangle.hlsli" />
     <File Path="shaders/gbuffer.hlsl" />
     <File Path="shaders/gbuffer_base_color.hlsl" />
     <File Path="shaders/imgui.hlsl" />
+    <File Path="shaders/postprocess.hlsl" />
     <File Path="shaders/mesh_transform.hlsli" />
     <File Path="shaders/static_samplers.hlsli" />
   </Folder>

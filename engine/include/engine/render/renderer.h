@@ -27,11 +27,19 @@ enum class EShadingTechnique
 	kDeferred = 0,
 };
 
+enum class EDebugRenderView : uint32_t
+{
+	kFinal = 0,
+	kAlbedo = 1,
+	kWorldNormal = 2,
+	kLightingHDR = 3,
+};
 
 struct RenderSettings
 {
 	uint32_t render_width = 0;
 	uint32_t render_height = 0;
+	EDebugRenderView debug_view = EDebugRenderView::kFinal;
 };
 
 
@@ -44,6 +52,7 @@ public:
 	virtual void render(const scene::Scene& scene, const scene::Camera& camera, ITexture& output_target) = 0;
 
 	const RenderSettings& getRenderSettings() const { return render_settings_; }
+	void setDebugView(EDebugRenderView view) { render_settings_.debug_view = view; }
 
 	virtual void resize(uint32_t width, uint32_t height) = 0;
 

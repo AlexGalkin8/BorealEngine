@@ -1,15 +1,15 @@
 # 012 — Deferred directional lighting
 
 - Date: 2026-11-22
-- Status: in progress. C++ integration is staged behind a local renderer switch.
+- Status: implemented. HDR readback and performance verification are tracked below.
 - Related roadmap milestone: M3. Deferred lighting
 - Authorization: continue development under the agreed plan
 
 ## Outcome and scope
 
 Render the existing opaque scene with one world-space directional light. Record
-one fullscreen lighting draw into a linear HDR target, then show it through a
-temporary SDR preview. Use the existing direct queue and fullscreen triangle
+one fullscreen lighting draw into a linear HDR target, then pass it to
+[postprocessing](016-postprocess-and-debug-views.md). Use the existing direct queue and fullscreen triangle
 pattern. Schedule depth sampling and position reconstruction with the first
 position-dependent effect. Point lights, shadows, PBR material channels, and the
 postprocessing chain have separate scope.
@@ -28,7 +28,7 @@ The current D3D12 depth allocation creates only a DSV.
 | `GBufferAlbedo` | `RGBA8_UNORM_SRGB` | The SRV returns linear RGB. Alpha is 0 on the clear and 1 for covered opaque pixels. |
 | `GBufferWorldNormal` | `RGBA16_FLOAT` | Signed world-space normal in RGB, including the glTF normal-map result. |
 | `SceneLightingHDR` (new) | `RGBA16_FLOAT` | Linear lit RGB, with values above 1 preserved. Alpha carries opaque coverage. |
-| Back buffer | `RGBA8_UNORM` | The preview clamps linear RGB to [0, 1] and applies the existing sRGB transfer function once. |
+| Back buffer | `RGBA8_UNORM` | Postprocessing tone maps linear RGB and applies the sRGB transfer once. |
 
 ## Plan
 
@@ -47,33 +47,14 @@ The current D3D12 depth allocation creates only a DSV.
    the constant diffuse scale. Write black for background or a zero normal,
    preserving coverage in alpha. Transition HDR from shader resource to render
    target before the draw and back to shader resource before the preview.
-4. Replace the main-path albedo preview with `LightingPreview`. Read the HDR
-   SRV and write every pixel to the UNORM back buffer. Reuse the existing
-   present-to-RTV-to-present sequence. M4 can consume the same linear HDR SRV
-   for exposure and tone mapping.
-5. The project author writes the HLSL. The development chat handles C++/RHI
-   integration and assists with the shader contract, debugging, and review.
+4. Pass the HDR result to the active [postprocess pass](016-postprocess-and-debug-views.md).
 
-## Shader handoff
+## Shader bindings
 
-Both shaders use the existing `vertexShader` and `pixelShader` entry points
-and the fullscreen triangle from `gbuffer_base_color.hlsl`. Use integer
-`SV_Position.xy` with `Load(..., mip 0)` for all texture reads.
-
-| File | Shader inputs | Output |
-|---|---|---|
-| `engine/shaders/deferred_lighting.hlsl` | `t0` albedo and coverage, `t1` signed world normal, `b0` directional light constants | Linear RGB and the original coverage in `SceneLightingHDR`. |
-| `engine/shaders/lighting_preview.hlsl` | `t0` linear HDR with coverage in alpha | Clamp linear RGB to [0, 1] and apply the sRGB transfer used by the albedo preview. Write black for zero coverage. |
-
-`b0` contains eight 32-bit floats: direction toward the light in XYZ and one
-padding float, then RGB light gain and one padding float. The reference
-direction is `(0.36, 0.48, -0.8)` and the gain is `(2, 2, 2)`.
-The lighting pixel shader should preserve coverage for dark geometry. Before
-normalization, check for a zero normal and output black in that case.
-
-Set `kEnableDeferredLighting` in `deferredrenderer.cpp` to `true` once both
-shader files are ready. The disabled path retains the existing albedo preview
-and allocates only the prepass and G-buffer targets.
+`deferred_lighting.hlsl` loads albedo and coverage from `t0` and signed
+world normals from `t1`. `b0` contains direction toward the light
+`(0.36, 0.48, -0.8)` and RGB gain `(2, 2, 2)` in two float4 registers.
+The pass writes linear HDR and preserves coverage.
 
 ## Acceptance criteria
 
@@ -99,12 +80,7 @@ and allocates only the prepass and G-buffer targets.
 
 ## Verification
 
-With lighting disabled, Debug and Release x64 built using a temporary
-debug-information override for the local MSPDB issue. Debug passed resize and
-RenderDoc capture smoke checks. GPU readback confirmed visible albedo at
-1280×720 and 960×540 with no GPU-based validation errors.
-
-Lighting-path checks below are pending the two HLSL files.
+The active lighting path passed the Debug sample launch and resize smoke check. Performance measurement remains pending.
 
 1. Build Debug and Release x64. Start the Debug sample from
    `samples/BorealSample1` with
@@ -115,7 +91,7 @@ Lighting-path checks below are pending the two HLSL files.
    `--tool renderdoc open-capture-tool live` and trigger it after the new size
    has settled. See the [capture guide](../../docs/gpu-capture-tools.md).
 2. In the Event Browser, verify the sequence
-   `DepthPrepass → GBufferPass → DeferredLighting → LightingPreview → Present`.
+   `DepthPrepass → GBufferPass → DeferredLighting → Postprocess → Present`.
    In Pipeline State, verify the lighting draw has three vertices, the
    expected two PS SRVs, light constants, an HDR RTV, and no DSV. Verify that
    the preview reads the same HDR resource. Inspect resource barriers in the

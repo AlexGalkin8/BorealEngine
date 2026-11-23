@@ -254,7 +254,7 @@ void Engine::frame()
 	imgui_backend_->newFrame(*input_, width, height, static_cast<float>(dt));
 	if (debug_menu_->isVisible())
 	{
-		debug_menu_->draw(width, height, pause_on_focus_lost_, *render_device_);
+		debug_menu_->draw(width, height, pause_on_focus_lost_, *render_device_, *renderer_);
 	}
 	const bool mouse_captured = debug_menu_->isVisible() && imgui_backend_->wantsMouse();
 	input_->setMouseLookEnabled(!mouse_captured);

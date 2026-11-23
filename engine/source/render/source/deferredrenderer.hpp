@@ -88,7 +88,8 @@ private:
 	void depthPrepass(const StaticMeshBucket& bucket, ITexture& depth_texture);
 	void gBufferPass(const StaticMeshBucket& bucket, ITexture& depth_texture);
 	void deferredLightingPass();
-	void previewPass(ITexture& output_target);
+	void postprocessPass(ITexture& output_target);
+
 	void drawStaticMeshes(ICommandList& command_list, const StaticMeshBucket& bucket, bool bind_material) const;
 	StaticMeshBucket buildStaticMeshBucket(const scene::Scene& scene, const scene::Camera& camera);
 	const RenderMesh* getOrCreateRenderMesh(const scene::MeshHandle& mesh);
@@ -97,7 +98,7 @@ private:
 	IPipelineState* depth_prepass_pipeline_state_ = nullptr;
 	IPipelineState* gbuffer_pipeline_state_ = nullptr;
 	IPipelineState* deferred_lighting_pipeline_state_ = nullptr;
-	IPipelineState* preview_pipeline_state_ = nullptr;
+	IPipelineState* postprocess_pipeline_state_ = nullptr;
 
 	ITexture* depth_texture_ = nullptr;
 	ITexture* gbuffer_base_color_ = nullptr;
