@@ -136,12 +136,7 @@ std::unique_ptr<IGpuFrameCapturer> IGpuFrameCapturer::create(const FrameCaptureS
 	{
 		openRenderDocUi(renderdoc_api, true, nullptr);
 	}
-	std::unique_ptr<IGpuFrameCapturer> capturer = std::make_unique<RenderDocCapturer>(renderdoc_api, settings.open_mode);
-	if (settings.capture_first_frame || settings.open_mode == ECaptureToolOpenMode::kCapture)
-	{
-		capturer->requestFrameCapture();
-	}
-	return capturer;
+	return std::make_unique<RenderDocCapturer>(renderdoc_api, settings.open_mode);
 }
 
 

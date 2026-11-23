@@ -26,7 +26,6 @@ struct FrameCaptureSettings
 	ECaptureTool tool = ECaptureTool::kNone;
 	std::wstring tool_path;
 	ECaptureToolOpenMode open_mode = ECaptureToolOpenMode::kNone;
-	bool capture_first_frame = false;
 };
 
 

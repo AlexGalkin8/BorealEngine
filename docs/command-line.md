@@ -15,5 +15,5 @@ command parsing.
 Run from `samples/BorealSample1`.
 
 ```powershell
-.\build\bin\x64\Debug\BorealSample1.exe --tool renderdoc capture-frame --settings 'data/settings.json'
+.\build\bin\x64\Debug\BorealSample1.exe --tool renderdoc --settings 'data/settings.json'
 ```

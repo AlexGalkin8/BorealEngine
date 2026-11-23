@@ -16,7 +16,7 @@ process lifetime to keep its graphics hooks valid. The sample starts normally
 and logs a warning if RenderDoc is unavailable. [RenderDoc in-application API](https://github.com/baldurk/renderdoc/blob/v1.x/docs/in_application_api.rst)
 
 The render device owns the optional `IGpuFrameCapturer`. The capturer tracks
-capture requests, and its factory queues the first capture when requested.
+capture requests. The debug menu requests captures explicitly.
 The engine calls the device at the frame boundaries so the capture
 includes presentation. The RenderDoc implementation logs the saved RDC path.
 The same interface can support PIX later.
@@ -26,11 +26,11 @@ The same interface can support PIX later.
 Debug and Release x64 builds passed with a temporary MSVC debug-information
 override to work around the local MSPDB error. The Debug sample passed the window resize
 smoke check with normal startup, with a missing DLL override, and with
-`--tool renderdoc capture-frame --settings data/settings.json`. The in-process
+`--tool renderdoc` with a capture request. The in-process
 capture produced an RDC file.
 Its exported command stream submitted `DepthPrepass` then `BaseColorPass`.
-The Debug run with `--tool renderdoc open-capture-tool capture` saved exactly
-one frame and launched the RenderDoc UI.
+The original startup-capture workflow was verified before it was replaced
+with the manual debug-menu action.
 
 ## Follow-up
 

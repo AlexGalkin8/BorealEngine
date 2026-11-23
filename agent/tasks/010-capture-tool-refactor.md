@@ -31,7 +31,7 @@ backend. PIX integration is a separate task.
   with spaces, a following `--settings` command and the standalone `--` delimiter.
 - Verify normal startup, malformed arguments and startup with a missing RenderDoc
   DLL.
-- Verify attach-only and both automatic UI modes. Confirm that `capture-frame`
-  and `open-capture-tool capture` each save one frame and that the capture
+- Verify attach-only and both UI modes. Confirm that a manual capture request
+  saves one frame and that the capture
   includes presentation and submits `DepthPrepass` before `BaseColorPass`.
 - Build Debug and Release x64 and record the verification results.

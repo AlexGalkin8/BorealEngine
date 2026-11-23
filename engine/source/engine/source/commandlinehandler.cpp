@@ -55,14 +55,10 @@ static bool parseCaptureToolOptions(const std::vector<std::wstring>& arguments, 
 	});
 	for (auto option = options_begin; option != options_end; ++option)
 	{
-		if (*option == L"capture-frame")
-		{
-			options.capture_first_frame = true;
-		}
-		else if (*option == L"tool-path")
+		if (*option == L"tool-path")
 		{
 			if (!options.tool_path.empty() || ++option == options_end || option->empty() ||
-				*option == L"tool-path" || *option == L"open-capture-tool" || *option == L"capture-frame")
+				*option == L"tool-path" || *option == L"open-capture-tool")
 			{
 				LOG_ERROR("Startup", "tool-path expects one path to the selected tool library.");
 				return false;

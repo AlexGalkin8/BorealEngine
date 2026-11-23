@@ -15,7 +15,7 @@ for how to combine it with other startup commands.
 |---|---|
 | `tool-path <path>` | Overrides the selected tool's library path. |
 | `open-capture-tool live` | Opens the tool interface at startup. |
-| `open-capture-tool capture` | Captures the first rendered frame and opens the saved capture. |
+| `open-capture-tool capture` | Opens a saved capture after you request a frame capture. |
 | `capture-frame` | Captures the first rendered frame. Omit `open-capture-tool` to save it without opening the interface. |
 
 ## RenderDoc
@@ -24,12 +24,11 @@ Use `--tool renderdoc` to enable the in-process capture API. The sample loads
 `%ProgramFiles%\RenderDoc\renderdoc.dll` by default before initializing D3D12.
 For a custom installation, pass `tool-path` with the path to the DLL. If the
 capture API is unavailable, the sample logs a warning and starts normally.
-When a capture is saved, the sample logs the path to the `.rdc` file.
+Press **F1** in the sample, then select **Tools > Capture frame**. The sample logs the saved `.rdc` path.
 
 ```powershell
 .\build\bin\x64\Debug\BorealSample1.exe --tool renderdoc
 .\build\bin\x64\Debug\BorealSample1.exe --tool renderdoc open-capture-tool live
 .\build\bin\x64\Debug\BorealSample1.exe --tool renderdoc open-capture-tool capture
-.\build\bin\x64\Debug\BorealSample1.exe --tool renderdoc capture-frame
 .\build\bin\x64\Debug\BorealSample1.exe --tool renderdoc tool-path 'C:\Tools\RenderDoc\renderdoc.dll'
 ```

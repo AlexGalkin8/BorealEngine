@@ -109,6 +109,7 @@ Lighting-path checks below are pending the two HLSL files.
 1. Build Debug and Release x64. Start the Debug sample from
    `samples/BorealSample1` with
    `--tool renderdoc open-capture-tool capture --settings <settings-path>`.
+   Press F1 and select **Tools > Capture frame**.
    Set the window size in the capture settings and confirm the actual target
    size in RenderDoc. For a capture after a resize, use
    `--tool renderdoc open-capture-tool live` and trigger it after the new size
