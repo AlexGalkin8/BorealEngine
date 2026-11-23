@@ -2,8 +2,8 @@
 
 Recorded on 2026-11-20 from scene, render, math, core and platform code.
 The repository is not entirely uniform: camera uses camelCase for some variables,
-while parts of the importer/platform use spaces instead of tabs. Preserve local
-conventions and do not rewrite the project solely for consistency.
+while parts of the importer/platform still use spaces. Use the rule below for
+new code. Existing indentation is tracked in [Task 018](tasks/018-code-indentation.md).
 
 ## Naming
 
@@ -24,7 +24,9 @@ conventions and do not rewrite the project solely for consistency.
 
 ## Formatting
 
-- Predominant style: tabs; opening braces of classes, functions and multiline
+- Indent C++ blocks with one tab per level. Set the tab width to four columns.
+  Use spaces for alignment within a line.
+- Opening braces of classes, functions and multiline
   control blocks on a separate line. Namespace braces stay on the declaration line.
 - Follow [swapchain.h](../engine/include/engine/render/interface/swapchain.h)
   for header spacing. Indent class members with one tab and align access labels

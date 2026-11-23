@@ -89,6 +89,23 @@ Start with [agent/README.md](README.md).
 - Extend the RHI for concrete requirements; justify large subsystems and dependencies
   through the current task.
 
+## Indentation
+
+- Use one tab per block level in C++ with a tab width of four columns.
+  Use spaces for alignment within a line.
+- Use four spaces per block level in HLSL source and include files.
+- Track existing-file migration and editor settings in
+  [Task 018](tasks/018-code-indentation.md).
+
+
+## Line endings
+
+- Use CRLF in Windows working copies of tracked project text files. Keep
+  text normalized to LF in Git.
+- Track existing-file migration and editor/Git configuration in
+  [Task 017](tasks/017-crlf-line-endings.md).
+
+
 ## Git workflow
 
 - The agent handles most Git preparation: inspect status/diffs and prepare focused

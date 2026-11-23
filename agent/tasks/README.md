@@ -20,6 +20,8 @@ See the [prioritized backlog](Backlog.md) for candidate work by stage and the
 | [013 — Dear ImGui integration](013-imgui-integration.md) | Implemented. RHI overlay, resize and input routing verified. |
 | [014 — Refactor the ImGui integration](014-imgui-refactor.md) | Planned. |
 | [016 — Postprocess and debug render views](016-postprocess-and-debug-views.md) | Implemented. |
+| [017 — Standardize CRLF line endings](017-crlf-line-endings.md) | Planned. |
+| [018 — Standardize C++ and HLSL indentation](018-code-indentation.md) | Planned. |
 
 Document substantial tasks that benefit from continuity across chats, not every
 minor edit. File name: `NNN-short-topic.md`. Keep the table current.
