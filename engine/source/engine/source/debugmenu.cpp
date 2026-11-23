@@ -11,6 +11,49 @@
 
 namespace engine {
 
+static void drawPointLights(scene::Scene& scene, bool& is_open)
+{
+	if (ImGui::Begin("Point lights", &is_open, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		std::vector<scene::PointLight>& lights = scene.getPointLights();
+		for (size_t index = 0; index < lights.size(); ++index)
+		{
+			ImGui::PushID(static_cast<int>(index));
+			ImGui::SeparatorText(("Point light " + std::to_string(index + 1)).c_str());
+			scene::PointLight& light = lights[index];
+			ImGui::Checkbox("Enabled", &light.enabled);
+			float position[] = { light.position.x, light.position.y, light.position.z };
+			if (ImGui::DragFloat3("Position", position, 0.05f))
+			{
+				light.position = { position[0], position[1], position[2] };
+			}
+			float color[] = { light.color.x, light.color.y, light.color.z };
+			if (ImGui::ColorEdit3("Color", color, ImGuiColorEditFlags_Float))
+			{
+				light.color = { color[0], color[1], color[2] };
+			}
+			ImGui::DragFloat("Intensity", &light.intensity, 0.05f, 0.0f, 1000.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+			ImGui::DragFloat("Radius", &light.radius, 0.05f, 0.01f, 1000.0f, "%.2f", ImGuiSliderFlags_AlwaysClamp);
+			const bool remove = ImGui::Button("Remove");
+			ImGui::PopID();
+			if (remove)
+			{
+				lights.erase(lights.begin() + index);
+				break;
+			}
+		}
+
+		ImGui::BeginDisabled(lights.size() >= scene::kMaxPointLights);
+		if (ImGui::Button("Add point light"))
+		{
+			lights.emplace_back();
+		}
+		ImGui::EndDisabled();
+	}
+	ImGui::End();
+}
+
+
 DebugMenu::DebugMenu(render::IRenderDevice& render_device, std::vector<std::string> scene_names,
 	const std::string& active_scene_name)
 	: render_device_(render_device)
@@ -54,6 +97,7 @@ std::string DebugMenu::draw(scene::Scene& scene, render::IRenderer& renderer)
 		if (ImGui::BeginMenu("Render"))
 		{
 			ImGui::MenuItem("Directional light", nullptr, &show_directional_light_);
+			ImGui::MenuItem("Point lights", nullptr, &show_point_lights_);
 			ImGui::MenuItem("Rendering statistics", nullptr, &show_rendering_stats_);
 			if (ImGui::BeginMenu("Debug view"))
 			{
@@ -133,6 +177,10 @@ std::string DebugMenu::draw(scene::Scene& scene, render::IRenderer& renderer)
 			}
 		}
 		ImGui::End();
+	}
+	if (show_point_lights_)
+	{
+		drawPointLights(scene, show_point_lights_);
 	}
 	if (show_rendering_stats_)
 	{

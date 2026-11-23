@@ -34,7 +34,45 @@ struct DirectionalLightConstants
 	float gain_padding;
 };
 
-static_assert(sizeof(DirectionalLightConstants) == 8 * sizeof(uint32_t));
+struct PointLightConstants
+{
+	float position[3];
+	float radius;
+	float light_gain[3];
+	float padding;
+};
+
+struct LightingConstants
+{
+	DirectionalLightConstants directional;
+	math::Matrix4x4 inverse_view_projection;
+	uint32_t point_light_count;
+	uint32_t padding[3];
+	PointLightConstants point_lights[scene::kMaxPointLights];
+};
+
+static_assert(sizeof(LightingConstants) == 60 * sizeof(uint32_t));
+
+// Invert the rigid view transform and the camera's D3D perspective projection.
+static math::Matrix4x4 buildInverseViewProjection(const scene::Camera& camera)
+{
+	const math::Matrix4x4& view = camera.getViewMatrix();
+	const math::Matrix4x4& projection = camera.getProjectionMatrix();
+	const math::Vector3& eye = camera.getPosition();
+	const math::Matrix4x4 inverse_view = {
+		view.m00, view.m10, view.m20, eye.x,
+		view.m01, view.m11, view.m21, eye.y,
+		view.m02, view.m12, view.m22, eye.z,
+		0.0f, 0.0f, 0.0f, 1.0f
+	};
+	const math::Matrix4x4 inverse_projection = {
+		1.0f / projection.m00, 0.0f, 0.0f, 0.0f,
+		0.0f, 1.0f / projection.m11, 0.0f, 0.0f,
+		0.0f, 0.0f, 0.0f, 1.0f,
+		0.0f, 0.0f, 1.0f / projection.m23, -projection.m22 / projection.m23
+	};
+	return inverse_view * inverse_projection;
+}
 
 
 static void setFullscreenViewport(ICommandList& command_list, const ITexture& target)
@@ -166,7 +204,7 @@ void DeferredRenderer::render(const scene::Scene& scene, const scene::Camera& ca
 	const StaticMeshBucket bucket = buildStaticMeshBucket(scene, camera);
 	depthPrepass(bucket, depth_texture);
 	gBufferPass(bucket, depth_texture);
-	deferredLightingPass(scene.getDirectionalLight());
+	deferredLightingPass(scene, camera, depth_texture);
 	postprocessPass(output_target);
 	render_device_.executeCommandLists(ECommandListType::kDirect);
 }
@@ -300,8 +338,8 @@ void DeferredRenderer::initPipelineStates()
 
 	GraphicsPipelineDesc lighting_desc = {};
 	lighting_desc.shader_state.shader_name = "deferred_lighting";
-	lighting_desc.resource_layout_state[0] = RootParameter::makeDescriptorTable({ DescriptorRange{ DescriptorType::kSRV, 0, 2 } });
-	lighting_desc.resource_layout_state[1] = RootParameter::makeConstants32Bits(0, 8);
+	lighting_desc.resource_layout_state[0] = RootParameter::makeDescriptorTable({ DescriptorRange{ DescriptorType::kSRV, 0, 3 } });
+	lighting_desc.resource_layout_state[1] = RootParameter::makeConstants32Bits(0, sizeof(LightingConstants) / sizeof(uint32_t));
 	lighting_desc.output_merger_state.addRenderTarget(kSceneLightingFormat);
 	lighting_desc.output_merger_state.depth_stencil.depth_enable = false;
 	lighting_desc.output_merger_state.depth_stencil.depth_write = false;
@@ -349,29 +387,53 @@ void DeferredRenderer::gBufferPass(const StaticMeshBucket& bucket, ITexture& dep
 }
 
 
-void DeferredRenderer::deferredLightingPass(const scene::DirectionalLight& light)
+void DeferredRenderer::deferredLightingPass(const scene::Scene& scene, const scene::Camera& camera, ITexture& depth_texture)
 {
+	const scene::DirectionalLight& light = scene.getDirectionalLight();
 	const math::Vector3 direction = light.direction_to_light.lengthSq() > 0.0f
 		? light.direction_to_light.normalize() : math::Vector3(0.0f, 0.0f, 0.0f);
 	const float intensity = light.enabled ? std::max(light.intensity, 0.0f) : 0.0f;
-	const DirectionalLightConstants constants = {
+	LightingConstants constants = {};
+	constants.directional = {
 		{ direction.x, direction.y, direction.z }, 0.0f,
 		{ std::max(light.color.x, 0.0f) * intensity,
 		  std::max(light.color.y, 0.0f) * intensity,
 		  std::max(light.color.z, 0.0f) * intensity }, 0.0f,
 	};
 
+	constants.inverse_view_projection = buildInverseViewProjection(camera);
+	for (const scene::PointLight& point : scene.getPointLights())
+	{
+		if (constants.point_light_count == scene::kMaxPointLights)
+		{
+			break;
+		}
+		if (!point.enabled || point.radius <= 0.0f || point.intensity <= 0.0f)
+		{
+			continue;
+		}
+
+		constants.point_lights[constants.point_light_count++] = {
+			{ point.position.x, point.position.y, point.position.z }, point.radius,
+			{ std::max(point.color.x, 0.0f) * point.intensity,
+			  std::max(point.color.y, 0.0f) * point.intensity,
+			  std::max(point.color.z, 0.0f) * point.intensity }, 0.0f,
+		};
+	}
+
 	ITexture& lighting_target = *scene_lighting_hdr_;
 	ICommandList& command_list = render_device_.acquireCommandList(ECommandListType::kDirect, "DeferredLighting");
+	command_list.transitionTexture(depth_texture, EResourceState::kDepthWrite, EResourceState::kShaderResource);
 	command_list.transitionTexture(lighting_target, EResourceState::kShaderResource, EResourceState::kRenderTarget);
 	command_list.setRenderTarget(lighting_target);
 	command_list.setPipelineState(*deferred_lighting_pipeline_state_);
 	setFullscreenViewport(command_list, lighting_target);
 	command_list.setDescriptorSet(0, { DescriptorResource::textureSRV(gbuffer_base_color_),
-		DescriptorResource::textureSRV(gbuffer_normal_) });
-	command_list.setGraphicsRoot32BitConstants(1, 8, &constants);
+		DescriptorResource::textureSRV(gbuffer_normal_), DescriptorResource::textureSRV(&depth_texture) });
+	command_list.setGraphicsRoot32BitConstants(1, sizeof(LightingConstants) / sizeof(uint32_t), &constants);
 	command_list.draw(3, 0);
 	command_list.transitionTexture(lighting_target, EResourceState::kRenderTarget, EResourceState::kShaderResource);
+	command_list.transitionTexture(depth_texture, EResourceState::kShaderResource, EResourceState::kDepthWrite);
 	render_device_.submitCommandList(command_list);
 }
 

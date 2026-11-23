@@ -48,7 +48,7 @@ bool createDsvDescriptor(D3D12RenderDevice& render_device, ID3D12Resource2* reso
 }
 
 
-bool createSrvDescriptor(D3D12RenderDevice& render_device, ID3D12Resource2* resource, const D3D12_RESOURCE_DESC& resource_desc, D3D12OwnedDescriptor& out_descriptor)
+bool createSrvDescriptor(D3D12RenderDevice& render_device, ID3D12Resource2* resource, const D3D12_RESOURCE_DESC& resource_desc, DXGI_FORMAT format, D3D12OwnedDescriptor& out_descriptor)
 {
 	ASSERT_MSG_RETURN(resource != nullptr, false, "D3D12Texture: SRV resource is null");
 
@@ -56,7 +56,7 @@ bool createSrvDescriptor(D3D12RenderDevice& render_device, ID3D12Resource2* reso
 	ASSERT_MSG_RETURN(srv_allocation.isValid(), false, "D3D12Texture: failed to allocate persistent SRV descriptor");
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC srv_desc = {};
-	srv_desc.Format = resource_desc.Format;
+	srv_desc.Format = format;
 	srv_desc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 	srv_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 	srv_desc.Texture2D.MipLevels = resource_desc.MipLevels;
@@ -92,6 +92,13 @@ std::unique_ptr<D3D12Texture> D3D12Texture::create(D3D12RenderDevice& render_dev
 	resource_desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
 	resource_desc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
+	const DXGI_FORMAT view_format = resource_desc.Format;
+	const bool shader_readable_depth = desc.format == ETextureFormat::D32_Float;
+	if (shader_readable_depth)
+	{
+		resource_desc.Format = DXGI_FORMAT_R32_TYPELESS;
+	}
+
 	D3D12_RESOURCE_STATES initial_state = D3D12_RESOURCE_STATE_COPY_DEST;
 	D3D12_CLEAR_VALUE* clear_value_ptr = nullptr;
 	D3D12_CLEAR_VALUE clear_value = {};
@@ -102,7 +109,7 @@ std::unique_ptr<D3D12Texture> D3D12Texture::create(D3D12RenderDevice& render_dev
 		resource_desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
 		initial_state = D3D12_RESOURCE_STATE_DEPTH_WRITE;
 
-		clear_value.Format = resource_desc.Format;
+		clear_value.Format = view_format;
 		clear_value.DepthStencil.Depth = 1.0f;
 		clear_value.DepthStencil.Stencil = 0;
 		clear_value_ptr = &clear_value;
@@ -111,7 +118,7 @@ std::unique_ptr<D3D12Texture> D3D12Texture::create(D3D12RenderDevice& render_dev
 	{
 		resource_desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
 		initial_state = D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE;
-		clear_value.Format = resource_desc.Format;
+		clear_value.Format = view_format;
 		clear_value_ptr = &clear_value;
 	}
 
@@ -124,8 +131,13 @@ std::unique_ptr<D3D12Texture> D3D12Texture::create(D3D12RenderDevice& render_dev
 
 	if (is_depth_texture)
 	{
-		ASSERT_MSG_RETURN_NULL(createDsvDescriptor(render_device, resource.Get(), resource_desc.Format, dsv_descriptor),
+		ASSERT_MSG_RETURN_NULL(createDsvDescriptor(render_device, resource.Get(), view_format, dsv_descriptor),
 			"Failed to create DSV descriptor for depth texture");
+		if (shader_readable_depth)
+		{
+			ASSERT_MSG_RETURN_NULL(createSrvDescriptor(render_device, resource.Get(), resource_desc, DXGI_FORMAT_R32_FLOAT, srv_descriptor),
+				"Failed to create depth SRV descriptor");
+		}
 	}
 	else
 	{
@@ -133,7 +145,7 @@ std::unique_ptr<D3D12Texture> D3D12Texture::create(D3D12RenderDevice& render_dev
 		{
 			ASSERT_MSG_RETURN_NULL(createRtvDescriptor(render_device, resource.Get(), rtv_descriptor), "Failed to create RTV descriptor for texture");
 		}
-		ASSERT_MSG_RETURN_NULL(createSrvDescriptor(render_device, resource.Get(), resource_desc, srv_descriptor), "Failed to create SRV descriptor for texture");
+		ASSERT_MSG_RETURN_NULL(createSrvDescriptor(render_device, resource.Get(), resource_desc, view_format, srv_descriptor), "Failed to create SRV descriptor for texture");
 	}
 
 	auto texture = std::unique_ptr<D3D12Texture>(new D3D12Texture(
@@ -156,7 +168,7 @@ std::unique_ptr<D3D12Texture> D3D12Texture::createBackBuffer(D3D12RenderDevice& 
 	D3D12OwnedDescriptor srv_descriptor = {};
 
 	ASSERT_MSG_RETURN_NULL(createRtvDescriptor(render_device, resource, rtv_descriptor), "Failed to create RTV descriptor for texture");
-	ASSERT_MSG_RETURN_NULL(createSrvDescriptor(render_device, resource, resource->GetDesc(), srv_descriptor), "Failed to create SRV descriptor for texture");
+	ASSERT_MSG_RETURN_NULL(createSrvDescriptor(render_device, resource, resource->GetDesc(), resource->GetDesc().Format, srv_descriptor), "Failed to create SRV descriptor for texture");
 
 	return std::unique_ptr<D3D12Texture>(new D3D12Texture(desc, resource, std::move(srv_descriptor), std::move(rtv_descriptor)));
 }

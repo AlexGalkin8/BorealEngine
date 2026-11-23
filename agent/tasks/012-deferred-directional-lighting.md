@@ -143,3 +143,19 @@ linear RGB color, and intensity. Scene JSON can set the initial values via
 `directional_light.direction_to_light`, `directional_light.color`, and
 `directional_light.intensity`. Changes apply to the active scene at runtime.
 Reloading a scene restores its initial values.
+
+## Point lights
+
+The deferred pass supports up to four point lights. It reconstructs world
+position from the D32 depth buffer through an R32_FLOAT SRV and the inverse
+camera view-projection matrix. Point lights use clamped inverse-square
+attenuation with a smooth cutoff at the configured radius.
+
+Open F1 > Render > Point lights to add, remove, or edit lights at runtime.
+The PBR materials test scene starts with two colored lights. Disable the
+directional light to inspect their contribution separately. The scene JSON
+stores the initial position, linear RGB color, intensity, and radius.
+
+Debug GPU readback matched an independent CPU reference before and after
+camera movement and resize. A disabled light and a second light with its
+radius reduced below the distance to any surface produced zero contribution.

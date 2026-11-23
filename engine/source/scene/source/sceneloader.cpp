@@ -535,6 +535,22 @@ static std::unique_ptr<Scene> loadSceneFromJsonText(
 		extractNumberValue(light_object, "intensity", light.intensity);
 	}
 
+	const std::vector<std::string> point_light_objects = extractObjectsArray(json_text, "point_lights");
+	std::vector<PointLight>& point_lights = scene->getPointLights();
+	for (const std::string& light_object : point_light_objects)
+	{
+		if (point_lights.size() == kMaxPointLights)
+		{
+			break;
+		}
+
+		PointLight& light = point_lights.emplace_back();
+		extractVector3Value(light_object, "position", light.position);
+		extractVector3Value(light_object, "color", light.color);
+		extractNumberValue(light_object, "intensity", light.intensity);
+		extractNumberValue(light_object, "radius", light.radius);
+	}
+
 	const std::string scene_path = extractStringValue(json_text, "scene_path");
 	std::vector<SceneModelEntry> model_entries = extractModelEntries(json_text);
 

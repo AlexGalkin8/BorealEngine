@@ -36,6 +36,7 @@ private:
 	bool pause_on_focus_lost_ = false;
 	bool visible_ = false;
 	bool show_directional_light_ = false;
+	bool show_point_lights_ = false;
 	bool show_rendering_stats_ = false;
 	bool show_imgui_metrics_ = false;
 };
