@@ -4,6 +4,8 @@
 #include "debugmenu.h"
 
 #include <engine/core/utility/assert.h>
+#include <engine/core/utility/log.h>
+
 #include <engine/platform/window.h>
 #include <engine/platform/input.h>
 #include <engine/scene/scene.h>
@@ -80,24 +82,9 @@ std::unique_ptr<Engine> Engine::create(const std::string& settings_file_name,
 	ASSERT_MSG_RETURN_NULL(engine->imgui_backend_ != nullptr, "Failed to initialize ImGui");
 	engine->debug_menu_ = std::make_unique<engine::DebugMenu>();
 
-	// Create default scene
-	{
-		std::unique_ptr<scene::ResourceManager> resource_manager = scene::ResourceManager::create();
-		ASSERT_MSG_RETURN_NULL(resource_manager != nullptr, "Failed to create scene resource manager");
-
-		std::unique_ptr<scene::Scene> default_scene = scene::SceneLoader::loadFromFile(
-			engine->settings_->engine_settings.default_scene_name,
-			*resource_manager,
-			engine->settings_->engine_settings.data_root_path,
-			engine->input_.get());
-		ASSERT_MSG_RETURN_NULL(default_scene != nullptr, "Failed to create default scene");
-
-		const float aspect = static_cast<float>(render_settings.render_width) / static_cast<float>(render_settings.render_height);
-		default_scene->getCamera().setAspect(aspect);
-
-		engine->scenes_.push_back(std::move(default_scene));
-		engine->current_scene_ = engine->scenes_.back().get();
-	}
+	engine->scene_names_ = scene::SceneLoader::listSceneNames(engine->settings_->engine_settings.data_root_path);
+	const bool scene_loaded = engine->loadScene(engine->settings_->engine_settings.default_scene_name);
+	ASSERT_MSG_RETURN_NULL(scene_loaded, "Failed to create default scene");
 
 	return engine;
 }
@@ -157,6 +144,26 @@ Engine::Engine()
 	: is_running_(false)
 	, pause_on_focus_lost_(false)
 {
+}
+
+
+bool Engine::loadScene(const std::string& scene_name)
+{
+	std::unique_ptr<scene::ResourceManager> resource_manager = scene::ResourceManager::create();
+	ASSERT_MSG_RETURN(resource_manager != nullptr, false, "Failed to create scene resource manager");
+	std::unique_ptr<scene::Scene> next_scene = scene::SceneLoader::loadFromFile(
+		scene_name, *resource_manager, settings_->engine_settings.data_root_path, input_.get());
+	if (!next_scene)
+	{
+		LOG_ERROR("Scene", "Failed to load scene {}.", scene_name);
+		return false;
+	}
+
+	const render::RenderSettings& settings = renderer_->getRenderSettings();
+	next_scene->getCamera().setAspect(static_cast<float>(settings.render_width) / static_cast<float>(settings.render_height));
+	active_scene_name_ = scene_name;
+	current_scene_ = std::move(next_scene);
+	return true;
 }
 
 
@@ -254,7 +261,12 @@ void Engine::frame()
 	imgui_backend_->newFrame(*input_, width, height, static_cast<float>(dt));
 	if (debug_menu_->isVisible())
 	{
-		debug_menu_->draw(width, height, pause_on_focus_lost_, *render_device_, *renderer_);
+		const std::string selected_scene = debug_menu_->draw(width, height, pause_on_focus_lost_, *render_device_, *renderer_,
+			scene_names_, active_scene_name_);
+		if (!selected_scene.empty())
+		{
+			loadScene(selected_scene);
+		}
 	}
 	const bool mouse_captured = debug_menu_->isVisible() && imgui_backend_->wantsMouse();
 	input_->setMouseLookEnabled(!mouse_captured);

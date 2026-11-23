@@ -8,9 +8,10 @@
 
 namespace engine {
 
-void DebugMenu::draw(uint32_t width, uint32_t height, bool& pause_on_focus_lost, render::IRenderDevice& render_device,
-	render::IRenderer& renderer)
+std::string DebugMenu::draw(uint32_t width, uint32_t height, bool& pause_on_focus_lost, render::IRenderDevice& render_device,
+	render::IRenderer& renderer, const std::vector<std::string>& scene_names, const std::string& active_scene_name)
 {
+	std::string selected_scene;
 	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(9.0f, 5.0f));
 	ImGui::PushStyleColor(ImGuiCol_MenuBarBg, ImVec4(0.08f, 0.12f, 0.15f, 1.0f));
 	ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.13f, 0.34f, 0.35f, 1.0f));
@@ -24,6 +25,18 @@ void DebugMenu::draw(uint32_t width, uint32_t height, bool& pause_on_focus_lost,
 			if (ImGui::MenuItem("Hide debug interface", "F1"))
 			{
 				visible_ = false;
+			}
+			ImGui::EndMenu();
+		}
+		if (ImGui::BeginMenu("Scene", !scene_names.empty()))
+		{
+			for (const std::string& scene_name : scene_names)
+			{
+				const bool active = scene_name == active_scene_name;
+				if (ImGui::MenuItem(scene_name.c_str(), nullptr, active) && !active)
+				{
+					selected_scene = scene_name;
+				}
 			}
 			ImGui::EndMenu();
 		}
@@ -43,6 +56,8 @@ void DebugMenu::draw(uint32_t width, uint32_t height, bool& pause_on_focus_lost,
 					{ "G-buffer albedo", EDebugRenderView::kAlbedo },
 					{ "G-buffer world normals", EDebugRenderView::kWorldNormal },
 					{ "HDR lighting (clipped SDR)", EDebugRenderView::kLightingHDR },
+					{ "Roughness", EDebugRenderView::kRoughness },
+					{ "Metallic", EDebugRenderView::kMetallic },
 				};
 				for (const View& view : kViews)
 				{
@@ -79,7 +94,7 @@ void DebugMenu::draw(uint32_t width, uint32_t height, bool& pause_on_focus_lost,
 
 	if (!visible_)
 	{
-		return;
+		return selected_scene;
 	}
 
 	if (show_rendering_stats_)
@@ -100,6 +115,7 @@ void DebugMenu::draw(uint32_t width, uint32_t height, bool& pause_on_focus_lost,
 	{
 		ImGui::ShowMetricsWindow(&show_imgui_metrics_);
 	}
+	return selected_scene;
 }
 
 }  // namespace engine

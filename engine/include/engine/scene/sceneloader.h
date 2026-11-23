@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 
 namespace platform {
@@ -19,6 +20,7 @@ namespace scene {
 class SceneLoader
 {
 public:
+	static std::vector<std::string> listSceneNames(const std::string& data_root_path);
 	static std::unique_ptr<Scene> loadFromFile(const std::string& scene_name, const std::string& data_root_path = "");
 	static std::unique_ptr<Scene> loadFromFile(const std::string& scene_name, ResourceManager& resource_manager, const std::string& data_root_path, platform::IInput* input = nullptr);
 	static void populateSceneActorsFromGltf(Scene& scene, const std::string& gltf_file_path);

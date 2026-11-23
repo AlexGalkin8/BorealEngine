@@ -6,7 +6,10 @@ Texture2D<float4> gNormalTexture : register(t1);
 
 cbuffer MaterialCB : register(b1)
 {
+    float4 gBaseColorFactor;
     float gNormalScale;
+    float gRoughnessFactor;
+    float gMetallicFactor;
 }
 
 struct VS_INPUT
@@ -34,6 +37,7 @@ struct GBUFFER_OUTPUT
 {
     float4 base_color : SV_Target0;
     float4 world_normal : SV_Target1;
+    float2 material : SV_Target2;
 };
 
 VS_OUTPUT vertexShader(VS_INPUT input)
@@ -98,7 +102,8 @@ float3 getWorldNormal(VS_OUTPUT input)
 GBUFFER_OUTPUT pixelShader(VS_OUTPUT input)
 {
     GBUFFER_OUTPUT output;
-    output.base_color = float4(gBaseColorTexture.Sample(gLinearWrapSampler, input.texcoord).rgb * input.color.rgb, 1.0);
+    output.base_color = float4(gBaseColorTexture.Sample(gLinearWrapSampler, input.texcoord).rgb * input.color.rgb * gBaseColorFactor.rgb, 1.0);
     output.world_normal = float4(getWorldNormal(input), 0.0);
+    output.material = float2(gRoughnessFactor, gMetallicFactor);
     return output;
 }

@@ -1,0 +1,23 @@
+{
+  "name": "pbr_materials_test",
+  "scene_path": "pbr_materials_test",
+  "models": [
+    {
+      "name": "pbr_materials_test.glb",
+      "node_transforms": "gltf",
+      "position": [22.87, -15.71, 38.84],
+      "scale": [1.0, 1.0, 1.0],
+      "rotation_euler_degrees": [-90.0, 0.0, 0.0]
+    }
+  ],
+  "camera": {
+    "type": "fps",
+    "eye": [0.0, 0.0, -2.4],
+    "target": [0.0, 0.0, 0.0],
+    "up": [0.0, 1.0, 0.0],
+    "fov_degrees": 50.0,
+    "aspect": 1.7777778,
+    "near": 0.1,
+    "far": 100.0
+  }
+}

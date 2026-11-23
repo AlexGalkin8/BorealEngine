@@ -1,6 +1,8 @@
 #include "engine/core/asset/gltfloader.h"
 #include "engine/core/utility/assert.h"
 
+#include <engine/math/transform.h>
+
 #include <cmath>
 #include <limits>
 #include <filesystem>
@@ -365,11 +367,89 @@ static void fillTexturesAndMaterials(const tinygltf3::Model& model, LoadedModelD
 		material_data.base_color_texture_index = material.pbr_metallic_roughness.base_color_texture.index;
 		material_data.normal_texture_index = material.normal_texture.index;
 		material_data.normal_scale = static_cast<float>(material.normal_texture.scale);
+		material_data.roughness_factor = static_cast<float>(material.pbr_metallic_roughness.roughness_factor);
+		material_data.metallic_factor = static_cast<float>(material.pbr_metallic_roughness.metallic_factor);
 		material_data.base_color_factor[0] = static_cast<float>(material.pbr_metallic_roughness.base_color_factor[0]);
 		material_data.base_color_factor[1] = static_cast<float>(material.pbr_metallic_roughness.base_color_factor[1]);
 		material_data.base_color_factor[2] = static_cast<float>(material.pbr_metallic_roughness.base_color_factor[2]);
 		material_data.base_color_factor[3] = static_cast<float>(material.pbr_metallic_roughness.base_color_factor[3]);
 		loaded_model.materials.push_back(std::move(material_data));
+	}
+}
+
+
+static math::Matrix4x4 translateNodeToMatrix(const tg3_node& node)
+{
+	math::Matrix4x4 matrix;
+	if (node.has_matrix)
+	{
+		for (uint32_t column = 0; column < 4; ++column)
+		{
+			for (uint32_t row = 0; row < 4; ++row)
+			{
+				matrix.at(row, column) = static_cast<float>(node.matrix[column * 4 + row]);
+			}
+		}
+	}
+	else
+	{
+		const math::Transform transform(
+			{ static_cast<float>(node.translation[0]), static_cast<float>(node.translation[1]), static_cast<float>(node.translation[2]) },
+			{ static_cast<float>(node.rotation[0]), static_cast<float>(node.rotation[1]), static_cast<float>(node.rotation[2]), static_cast<float>(node.rotation[3]) },
+			{ static_cast<float>(node.scale[0]), static_cast<float>(node.scale[1]), static_cast<float>(node.scale[2]) });
+		matrix = transform.toMatrix4x4();
+	}
+
+	// Mesh vertices are already reflected across Z during import.
+	math::Matrix4x4 reflect_z = math::Matrix4x4::identity();
+	reflect_z.at(2, 2) = -1.0f;
+	return reflect_z * matrix * reflect_z;
+}
+
+
+static void collectMeshInstances(const tg3_model& model, LoadedModelData& loaded_model)
+{
+	if (model.scenes_count == 0)
+	{
+		return;
+	}
+
+	const uint32_t scene_index = model.default_scene < 0 ? 0 : static_cast<uint32_t>(model.default_scene);
+	ASSERT_MSG_RETURN_VOID(scene_index < model.scenes_count, "Invalid glTF default scene index");
+
+	struct PendingNode
+	{
+		int32_t index;
+		math::Matrix4x4 parent_transform;
+	};
+
+	const tg3_scene& scene = model.scenes[scene_index];
+	std::vector<PendingNode> pending;
+	std::vector<uint8_t> visited(model.nodes_count, 0);
+	for (uint32_t root = 0; root < scene.nodes_count; ++root)
+	{
+		pending.push_back({ scene.nodes[root], math::Matrix4x4::identity() });
+	}
+	while (!pending.empty())
+	{
+		const PendingNode entry = pending.back();
+		pending.pop_back();
+		if (entry.index < 0 || static_cast<uint32_t>(entry.index) >= model.nodes_count || visited[entry.index])
+		{
+			continue;
+		}
+
+		visited[entry.index] = 1;
+		const tg3_node& node = model.nodes[entry.index];
+		const math::Matrix4x4 transform = entry.parent_transform * translateNodeToMatrix(node);
+		if (node.mesh >= 0 && static_cast<uint32_t>(node.mesh) < model.meshes_count)
+		{
+			loaded_model.mesh_instances.push_back({ static_cast<uint32_t>(node.mesh), transform });
+		}
+		for (uint32_t child = 0; child < node.children_count; ++child)
+		{
+			pending.push_back({ node.children[child], transform });
+		}
 	}
 }
 
@@ -381,6 +461,7 @@ LoadedModelData loadModelFromGltf(const std::string& file_path)
 
 	LoadedModelData loaded_model{};
 	fillTexturesAndMaterials(model, loaded_model, file_path);
+	collectMeshInstances(*model.get(), loaded_model);
 	for (uint32_t mesh_index = 0; mesh_index < model->meshes_count; ++mesh_index)
 	{
 		const tg3_mesh& mesh = model->meshes[mesh_index];

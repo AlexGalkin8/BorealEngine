@@ -46,13 +46,21 @@ private:
 		math::Matrix4x4 view_projection;
 	};
 
+	struct MaterialConstants
+	{
+		float base_color_factor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+		float normal_scale = 0.0f;
+		float roughness_factor = 1.0f;
+		float metallic_factor = 1.0f;
+	};
+
 	struct RenderMesh
 	{
 		IBuffer* vertex_buffer = nullptr;
 		IBuffer* index_buffer = nullptr;
 		ITexture* base_color_texture = nullptr;
 		ITexture* normal_texture = nullptr;
-		float normal_scale = 0.0f;
+		MaterialConstants material;
 		uint32_t vertex_stride = 0;
 		uint32_t index_count = 0;
 	};
@@ -103,6 +111,7 @@ private:
 	ITexture* depth_texture_ = nullptr;
 	ITexture* gbuffer_base_color_ = nullptr;
 	ITexture* gbuffer_normal_ = nullptr;
+	ITexture* gbuffer_material_ = nullptr;
 	ITexture* scene_lighting_hdr_ = nullptr;
 	ITexture* default_white_texture_ = nullptr;
 

@@ -33,6 +33,8 @@ enum class EDebugRenderView : uint32_t
 	kAlbedo = 1,
 	kWorldNormal = 2,
 	kLightingHDR = 3,
+	kRoughness = 4,
+	kMetallic = 5,
 };
 
 struct RenderSettings

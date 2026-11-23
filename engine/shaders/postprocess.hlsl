@@ -3,6 +3,7 @@
 Texture2D<float4> gSceneLighting : register(t0);
 Texture2D<float4> gAlbedo : register(t1);
 Texture2D<float4> gWorldNormal : register(t2);
+Texture2D<float2> gMaterial : register(t3);
 
 cbuffer Postprocess : register(b0)
 {
@@ -28,6 +29,13 @@ float4 pixelShader(float4 position : SV_POSITION) : SV_Target
         const float coverage = gAlbedo.Load(coordinates).a;
         const float3 normal = gWorldNormal.Load(coordinates).xyz;
         return float4(saturate(normal * 0.5 + 0.5) * coverage, 1.0);
+    }
+
+    if (gDebugView == 4 || gDebugView == 5)
+    {
+        const float2 material = gMaterial.Load(coordinates);
+        const float value = gDebugView == 4 ? material.r : material.g;
+        return float4(value.xxx, 1.0);
     }
 
     const float3 hdr = max(gSceneLighting.Load(coordinates).rgb, 0.0);

@@ -12,6 +12,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <filesystem>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -23,6 +24,7 @@ namespace scene {
 struct SceneModelEntry
 {
 	std::string model_name;
+	bool use_gltf_node_transforms = false;
 	math::Vector3 position = math::Vector3(0.0f, 0.0f, 0.0f);
 	math::Vector3 scale = math::Vector3(1.0f, 1.0f, 1.0f);
 	math::Vector3 rotation_euler_degrees = math::Vector3(0.0f, 0.0f, 0.0f);
@@ -43,6 +45,13 @@ static std::string readTextFile(const std::string& path)
 }
 
 
+static std::string resolveScenesDirectory(const std::string& data_root_path)
+{
+	const std::string root = data_root_path.empty() ? kDataDirectory : data_root_path;
+	return root + "/" + kScenesDirectory;
+}
+
+
 static std::string resolveSceneFilePath(const std::string& scene_name, const std::string& data_root_path)
 {
 	if (scene_name.empty())
@@ -50,8 +59,7 @@ static std::string resolveSceneFilePath(const std::string& scene_name, const std
 		return {};
 	}
 
-	const std::string root = data_root_path.empty() ? kDataDirectory : data_root_path;
-	return root + "/" + kScenesDirectory + "/" + scene_name + "/" + scene_name + ".json";
+	return resolveScenesDirectory(data_root_path) + "/" + scene_name + "/" + scene_name + ".json";
 }
 
 
@@ -370,6 +378,7 @@ static std::vector<SceneModelEntry> extractModelEntries(std::string_view json_te
 	{
 		SceneModelEntry entry;
 		entry.model_name = extractStringValue(model_object, "name");
+		entry.use_gltf_node_transforms = extractStringValue(model_object, "node_transforms") == "gltf";
 
 		extractVector3Value(model_object, "position", entry.position);
 		extractVector3Value(model_object, "scale", entry.scale);
@@ -389,7 +398,8 @@ static void addActorsFromLoadedModel(
 	Scene& scene,
 	const asset::LoadedModelData& loaded_model,
 	const std::string& resource_path,
-	const math::Transform& base_transform)
+	const math::Transform& base_transform,
+	bool use_gltf_node_transforms = false)
 {
 	auto actor = std::make_shared<StaticMeshActor>("gltf_actor");
 	actor->getTransform() = base_transform;
@@ -397,9 +407,10 @@ static void addActorsFromLoadedModel(
 	scene::MeshRendererComponent& mesh_renderer = actor->getMeshRenderer();
 	mesh_renderer.clearMeshSlots();
 
-	for (const asset::LoadedPrimitiveData& primitive_data : loaded_model.primitives)
+	const auto add_slot = [&](const asset::LoadedPrimitiveData& primitive_data, const math::Matrix4x4& local_transform)
 	{
 		scene::MeshSlot& slot = mesh_renderer.addMeshSlot();
+		slot.local_transform = local_transform;
 		slot.mesh.resource_path = resource_path;
 		slot.mesh.primitive = EMeshPrimitive::kTriangle;
 		slot.mesh.mesh_index = primitive_data.mesh_index;
@@ -420,6 +431,27 @@ static void addActorsFromLoadedModel(
 		else
 		{
 			slot.material.name = "default";
+		}
+	};
+
+	if (use_gltf_node_transforms && !loaded_model.mesh_instances.empty())
+	{
+		for (const asset::LoadedMeshInstance& instance : loaded_model.mesh_instances)
+		{
+			for (const asset::LoadedPrimitiveData& primitive : loaded_model.primitives)
+			{
+				if (primitive.mesh_index == instance.mesh_index)
+				{
+					add_slot(primitive, instance.transform);
+				}
+			}
+		}
+	}
+	else
+	{
+		for (const asset::LoadedPrimitiveData& primitive : loaded_model.primitives)
+		{
+			add_slot(primitive, math::Matrix4x4::identity());
 		}
 	}
 
@@ -533,7 +565,7 @@ static std::unique_ptr<Scene> loadSceneFromJsonText(
 			math::radians(model_entry.rotation_euler_degrees.y),
 			math::radians(model_entry.rotation_euler_degrees.z));
 
-		addActorsFromLoadedModel(*scene, loaded_model, resolved_model_path, model_transform);
+		addActorsFromLoadedModel(*scene, loaded_model, resolved_model_path, model_transform, model_entry.use_gltf_node_transforms);
 	}
 
 	if (scene->getStaticMeshActors().empty())
@@ -543,6 +575,26 @@ static std::unique_ptr<Scene> loadSceneFromJsonText(
 	}
 
 	return scene;
+}
+
+
+std::vector<std::string> SceneLoader::listSceneNames(const std::string& data_root_path)
+{
+	std::vector<std::string> scene_names;
+	std::error_code error;
+	const std::filesystem::directory_iterator end;
+	for (std::filesystem::directory_iterator entry(resolveScenesDirectory(data_root_path), error);
+		!error && entry != end; entry.increment(error))
+	{
+		const std::string scene_name = entry->path().filename().string();
+		std::error_code file_error;
+		if (std::filesystem::is_regular_file(resolveSceneFilePath(scene_name, data_root_path), file_error))
+		{
+			scene_names.push_back(scene_name);
+		}
+	}
+	std::sort(scene_names.begin(), scene_names.end());
+	return scene_names;
 }
 
 

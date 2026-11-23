@@ -1,5 +1,7 @@
 #pragma once
 
+#include <engine/math/matrix.h>
+
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -42,6 +44,8 @@ struct LoadedMaterialData
 	int32_t base_color_texture_index = -1;
 	int32_t normal_texture_index = -1;
 	float normal_scale = 1.0f;
+	float roughness_factor = 1.0f;
+	float metallic_factor = 1.0f;
 	float base_color_factor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 };
 
@@ -53,11 +57,18 @@ struct LoadedPrimitiveData
 	LoadedMeshData mesh_data;
 };
 
+struct LoadedMeshInstance
+{
+	uint32_t mesh_index;
+	math::Matrix4x4 transform;
+};
+
 struct LoadedModelData
 {
 	std::vector<LoadedTextureData> textures;
 	std::vector<LoadedMaterialData> materials;
 	std::vector<LoadedPrimitiveData> primitives;
+	std::vector<LoadedMeshInstance> mesh_instances;
 };
 
 extern LoadedMeshData loadStaticMeshFromGltf(const std::string& file_path);

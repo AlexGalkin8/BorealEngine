@@ -38,6 +38,7 @@ struct MeshSlot
 {
 	MeshHandle mesh;
 	MaterialHandle material;
+	math::Matrix4x4 local_transform = math::Matrix4x4::identity();
 };
 
 

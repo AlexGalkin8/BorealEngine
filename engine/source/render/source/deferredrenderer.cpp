@@ -15,6 +15,7 @@
 #include "interface/texture.h"
 #include "interface/buffer.h"
 
+#include <algorithm>
 #include <array>
 
 
@@ -22,6 +23,7 @@ namespace render {
 
 static constexpr ETextureFormat kGBufferBaseColorFormat = ETextureFormat::kRGBA8_Unorm_Srgb;
 static constexpr ETextureFormat kGBufferNormalFormat = ETextureFormat::kRGBA16_Float;
+static constexpr ETextureFormat kGBufferMaterialFormat = ETextureFormat::kRG8_Unorm;
 static constexpr ETextureFormat kSceneLightingFormat = ETextureFormat::kRGBA16_Float;
 
 struct DirectionalLightConstants
@@ -227,10 +229,10 @@ void DeferredRenderer::initResizableTextures(uint32_t width, uint32_t height)
 {
 	GpuResourceManager& resource_manager = render_device_.getResourceManager();
 
-	constexpr std::array<ETextureFormat, 4> formats = {
-		ETextureFormat::D32_Float, kGBufferBaseColorFormat, kGBufferNormalFormat, kSceneLightingFormat };
+	constexpr std::array<ETextureFormat, 5> formats = {
+		ETextureFormat::D32_Float, kGBufferBaseColorFormat, kGBufferNormalFormat, kGBufferMaterialFormat, kSceneLightingFormat };
 	const std::array<ITexture**, formats.size()> targets = {
-		&depth_texture_, &gbuffer_base_color_, &gbuffer_normal_, &scene_lighting_hdr_ };
+		&depth_texture_, &gbuffer_base_color_, &gbuffer_normal_, &gbuffer_material_, &scene_lighting_hdr_ };
 	std::array<ITexture*, formats.size()> replacements = {};
 	ITexture::Desc desc = {};
 	desc.width = width;
@@ -253,7 +255,8 @@ void DeferredRenderer::initResizableTextures(uint32_t width, uint32_t height)
 	SET_RENDER_OBJECT_DEBUG_NAME(*replacements[0], "DepthPrepassDepth");
 	SET_RENDER_OBJECT_DEBUG_NAME(*replacements[1], "GBufferAlbedo");
 	SET_RENDER_OBJECT_DEBUG_NAME(*replacements[2], "GBufferWorldNormal");
-	SET_RENDER_OBJECT_DEBUG_NAME(*replacements[3], "SceneLightingHDR");
+	SET_RENDER_OBJECT_DEBUG_NAME(*replacements[3], "GBufferMaterial");
+	SET_RENDER_OBJECT_DEBUG_NAME(*replacements[4], "SceneLightingHDR");
 	for (size_t index = 0; index < targets.size(); ++index)
 	{
 		ITexture*& target = *targets[index];
@@ -287,9 +290,10 @@ void DeferredRenderer::initPipelineStates()
 	gbuffer_desc.input_layout_state.addAttribute(ESemanticType::kTangent, ETextureFormat::kRGBA32_Float);
 	gbuffer_desc.input_layout_state.addAttribute(ESemanticType::kTexCoord, ETextureFormat::kRG32_Float);
 	gbuffer_desc.resource_layout_state[1] = RootParameter::makeDescriptorTable({ DescriptorRange{ DescriptorType::kSRV, 0, 2 } });
-	gbuffer_desc.resource_layout_state[2] = RootParameter::makeConstants32Bits(1, 1, 0);
+	gbuffer_desc.resource_layout_state[2] = RootParameter::makeConstants32Bits(1, sizeof(MaterialConstants) / sizeof(uint32_t), 0);
 	gbuffer_desc.output_merger_state.addRenderTarget(kGBufferBaseColorFormat);
 	gbuffer_desc.output_merger_state.addRenderTarget(kGBufferNormalFormat);
+	gbuffer_desc.output_merger_state.addRenderTarget(kGBufferMaterialFormat);
 	gbuffer_desc.output_merger_state.depth_stencil.depth_write = false;
 	gbuffer_desc.output_merger_state.depth_stencil.depth_func = EDepthFunc::kEqual;
 	gbuffer_pipeline_state_ = &pipeline_state_manager_.createPipelineState(gbuffer_desc);
@@ -305,7 +309,7 @@ void DeferredRenderer::initPipelineStates()
 
 	GraphicsPipelineDesc postprocess_desc = {};
 	postprocess_desc.shader_state.shader_name = "postprocess";
-	postprocess_desc.resource_layout_state[0] = RootParameter::makeDescriptorTable({ DescriptorRange{ DescriptorType::kSRV, 0, 3 } });
+	postprocess_desc.resource_layout_state[0] = RootParameter::makeDescriptorTable({ DescriptorRange{ DescriptorType::kSRV, 0, 4 } });
 	postprocess_desc.resource_layout_state[1] = RootParameter::makeConstants32Bits(0, 2);
 	postprocess_desc.output_merger_state.addRenderTarget(kBackBufferFormat);
 	postprocess_desc.output_merger_state.depth_stencil.depth_enable = false;
@@ -331,13 +335,16 @@ void DeferredRenderer::gBufferPass(const StaticMeshBucket& bucket, ITexture& dep
 	ICommandList& command_list = render_device_.acquireCommandList(ECommandListType::kDirect, "GBufferPass");
 	command_list.transitionTexture(*gbuffer_base_color_, EResourceState::kShaderResource, EResourceState::kRenderTarget);
 	command_list.transitionTexture(*gbuffer_normal_, EResourceState::kShaderResource, EResourceState::kRenderTarget);
-	command_list.setRenderTargets({ gbuffer_base_color_, gbuffer_normal_ }, &depth_texture);
+	command_list.transitionTexture(*gbuffer_material_, EResourceState::kShaderResource, EResourceState::kRenderTarget);
+	command_list.setRenderTargets({ gbuffer_base_color_, gbuffer_normal_, gbuffer_material_ }, &depth_texture);
 	command_list.clearRenderTarget(*gbuffer_base_color_, 0.0f, 0.0f, 0.0f, 0.0f);
 	command_list.clearRenderTarget(*gbuffer_normal_, 0.0f, 0.0f, 0.0f, 0.0f);
+	command_list.clearRenderTarget(*gbuffer_material_, 0.0f, 0.0f, 0.0f, 0.0f);
 	command_list.setPipelineState(*gbuffer_pipeline_state_);
 	drawStaticMeshes(command_list, bucket, true);
 	command_list.transitionTexture(*gbuffer_base_color_, EResourceState::kRenderTarget, EResourceState::kShaderResource);
 	command_list.transitionTexture(*gbuffer_normal_, EResourceState::kRenderTarget, EResourceState::kShaderResource);
+	command_list.transitionTexture(*gbuffer_material_, EResourceState::kRenderTarget, EResourceState::kShaderResource);
 	render_device_.submitCommandList(command_list);
 }
 
@@ -379,7 +386,8 @@ void DeferredRenderer::postprocessPass(ITexture& output_target)
 	command_list.setPipelineState(*postprocess_pipeline_state_);
 	setFullscreenViewport(command_list, output_target);
 	command_list.setDescriptorSet(0, { DescriptorResource::textureSRV(scene_lighting_hdr_),
-		DescriptorResource::textureSRV(gbuffer_base_color_), DescriptorResource::textureSRV(gbuffer_normal_) });
+		DescriptorResource::textureSRV(gbuffer_base_color_), DescriptorResource::textureSRV(gbuffer_normal_),
+		DescriptorResource::textureSRV(gbuffer_material_) });
 	command_list.setGraphicsRoot32BitConstants(1, 2, &constants);
 	command_list.draw(3, 0);
 	command_list.transitionTexture(output_target, EResourceState::kRenderTarget, EResourceState::kPresent);
@@ -400,7 +408,7 @@ void DeferredRenderer::drawStaticMeshes(ICommandList& command_list, const Static
 		{
 			command_list.setDescriptorSet(1, { DescriptorResource::textureSRV(draw.mesh.base_color_texture),
 				DescriptorResource::textureSRV(draw.mesh.normal_texture) });
-			command_list.setGraphicsRoot32BitConstants(2, 1, &draw.mesh.normal_scale);
+			command_list.setGraphicsRoot32BitConstants(2, sizeof(MaterialConstants) / sizeof(uint32_t), &draw.mesh.material);
 		}
 		command_list.setVertexBuffer(*draw.mesh.vertex_buffer, draw.mesh.vertex_stride);
 		command_list.setIndexBuffer(*draw.mesh.index_buffer);
@@ -423,13 +431,14 @@ DeferredRenderer::StaticMeshBucket DeferredRenderer::buildStaticMeshBucket(const
 			continue;
 		}
 
-		const CameraObjectConstants constants = { static_mesh_actor->getTransform().toMatrix4x4(), view_projection };
+		const math::Matrix4x4 actor_world = static_mesh_actor->getTransform().toMatrix4x4();
 		for (const scene::MeshSlot& slot : static_mesh_actor->getMeshRenderer().getMeshSlots())
 		{
 			const RenderMesh* mesh = getOrCreateRenderMesh(slot.mesh);
 			if (mesh)
 			{
 				ASSERT_MSG_RETURN(mesh->base_color_texture != nullptr, bucket, "Base color texture is not initialized");
+				const CameraObjectConstants constants = { actor_world * slot.local_transform, view_projection };
 				bucket.push_back({ *mesh, constants });
 			}
 		}
@@ -526,6 +535,9 @@ const DeferredRenderer::RenderMesh* DeferredRenderer::getOrCreateRenderMesh(cons
 		if (primitive_it->material_index >= 0 && static_cast<uint32_t>(primitive_it->material_index) < materials.size())
 		{
 			const asset::LoadedMaterialData& material = materials[primitive_it->material_index];
+			std::copy_n(material.base_color_factor, 4, gpu_data.material.base_color_factor);
+			gpu_data.material.roughness_factor = material.roughness_factor;
+			gpu_data.material.metallic_factor = material.metallic_factor;
 			if (material.base_color_texture_index >= 0 && static_cast<uint32_t>(material.base_color_texture_index) < textures.size())
 			{
 				ITexture* texture = textures[material.base_color_texture_index].base_color;
@@ -540,7 +552,7 @@ const DeferredRenderer::RenderMesh* DeferredRenderer::getOrCreateRenderMesh(cons
 				if (texture)
 				{
 					gpu_data.normal_texture = texture;
-					gpu_data.normal_scale = material.normal_scale;
+					gpu_data.material.normal_scale = material.normal_scale;
 				}
 			}
 		}

@@ -120,3 +120,18 @@ view-projection matrix used to fill the depth, using D3D depth in [0, 1],
 pixel-center coordinates, viewport Y inversion and a homogeneous divide.
 Validate by reprojecting known points after a camera move and resize.
 [D3D12 resource states](https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_resource_states)
+
+## PBR material inputs
+
+The opaque G-buffer multiplies sampled albedo and vertex color by the glTF
+base color factor. Its linear RG8_UNORM material target stores roughness in R
+and metallic in G. This stage reads scalar factors. Sampling the glTF
+metallic-roughness texture and evaluating the PBR BRDF are follow-up work.
+
+Open F1 > Scene > pbr_materials_test in BorealSample1, or start it from its sample directory with
+`--settings data/pbr_materials_test_settings.json`. The test scene opts into
+glTF node transforms for the sphere grid. Use F1 and select Roughness or
+Metallic under Render > Debug view. GPU readback confirmed all eight
+roughness levels and metallic 1.0 on covered pixels at 1280x720 and after a
+resize to 960x540 with D3D12 GPU-based validation enabled. The default scene
+also passed the existing diffuse lighting and debug view readback check.
