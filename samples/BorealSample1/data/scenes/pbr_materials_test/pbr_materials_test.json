@@ -10,6 +10,11 @@
       "rotation_euler_degrees": [-90.0, 0.0, 0.0]
     }
   ],
+  "directional_light": {
+    "direction_to_light": [0.36, 0.48, -0.8],
+    "color": [1.0, 1.0, 1.0],
+    "intensity": 2.0
+  },
   "camera": {
     "type": "fps",
     "eye": [0.0, 0.0, -2.4],

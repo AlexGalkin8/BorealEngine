@@ -10,7 +10,7 @@
 Render the existing opaque scene with one world-space directional light. Record
 one fullscreen lighting draw into a linear HDR target, then pass it to
 [postprocessing](016-postprocess-and-debug-views.md). Use the existing direct queue and fullscreen triangle
-pattern. Schedule depth sampling and position reconstruction with the first
+pattern. The scene owns the directional light settings. Schedule depth sampling and position reconstruction with the first
 position-dependent effect. Point lights, shadows, PBR material channels, and the
 postprocessing chain have separate scope.
 
@@ -34,8 +34,8 @@ The current D3D12 depth allocation creates only a DSV.
 
 1. Define the shader bindings and reference light. Use an SRV table for albedo
    and normals and per-pass constants for a normalized world-space vector
-   pointing **toward** the light and an RGB linear light gain. Set the light
-   in the renderer for this task.
+   pointing **toward** the light and an RGB linear light gain. Set the defaults
+   in the scene.
 2. Add `SceneLightingHDR` through the existing GPU resource manager. Allocate it
    with the depth and G-buffer replacements before publishing the resized set.
    Reuse the engine's GPU-idle resize path and preserve its allocation failure
@@ -135,3 +135,11 @@ Metallic under Render > Debug view. GPU readback confirmed all eight
 roughness levels and metallic 1.0 on covered pixels at 1280x720 and after a
 resize to 960x540 with D3D12 GPU-based validation enabled. The default scene
 also passed the existing diffuse lighting and debug view readback check.
+
+## Directional light controls
+
+Use F1 > Render > Directional light to change the enabled state, direction,
+linear RGB color, and intensity. Scene JSON can set the initial values via
+`directional_light.direction_to_light`, `directional_light.color`, and
+`directional_light.intensity`. Changes apply to the active scene at runtime.
+Reloading a scene restores its initial values.

@@ -2,15 +2,26 @@
 
 #include <engine/render/interface/renderdevice.h>
 #include <engine/render/renderer.h>
+#include <engine/scene/scene.h>
 
 #include <imgui.h>
+
+#include <utility>
 
 
 namespace engine {
 
-std::string DebugMenu::draw(uint32_t width, uint32_t height, bool& pause_on_focus_lost, render::IRenderDevice& render_device,
-	render::IRenderer& renderer, const std::vector<std::string>& scene_names, const std::string& active_scene_name)
+DebugMenu::DebugMenu(render::IRenderDevice& render_device, std::vector<std::string> scene_names,
+	const std::string& active_scene_name)
+	: render_device_(render_device)
+	, scene_names_(std::move(scene_names))
+	, active_scene_name_(active_scene_name)
+{}
+
+
+std::string DebugMenu::draw(scene::Scene& scene, render::IRenderer& renderer)
 {
+	const render::RenderSettings& render_settings = renderer.getRenderSettings();
 	std::string selected_scene;
 	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(9.0f, 5.0f));
 	ImGui::PushStyleColor(ImGuiCol_MenuBarBg, ImVec4(0.08f, 0.12f, 0.15f, 1.0f));
@@ -28,11 +39,11 @@ std::string DebugMenu::draw(uint32_t width, uint32_t height, bool& pause_on_focu
 			}
 			ImGui::EndMenu();
 		}
-		if (ImGui::BeginMenu("Scene", !scene_names.empty()))
+		if (ImGui::BeginMenu("Scene", !scene_names_.empty()))
 		{
-			for (const std::string& scene_name : scene_names)
+			for (const std::string& scene_name : scene_names_)
 			{
-				const bool active = scene_name == active_scene_name;
+				const bool active = scene_name == active_scene_name_;
 				if (ImGui::MenuItem(scene_name.c_str(), nullptr, active) && !active)
 				{
 					selected_scene = scene_name;
@@ -42,6 +53,7 @@ std::string DebugMenu::draw(uint32_t width, uint32_t height, bool& pause_on_focu
 		}
 		if (ImGui::BeginMenu("Render"))
 		{
+			ImGui::MenuItem("Directional light", nullptr, &show_directional_light_);
 			ImGui::MenuItem("Rendering statistics", nullptr, &show_rendering_stats_);
 			if (ImGui::BeginMenu("Debug view"))
 			{
@@ -61,7 +73,7 @@ std::string DebugMenu::draw(uint32_t width, uint32_t height, bool& pause_on_focu
 				};
 				for (const View& view : kViews)
 				{
-					if (ImGui::MenuItem(view.label, nullptr, renderer.getRenderSettings().debug_view == view.mode))
+					if (ImGui::MenuItem(view.label, nullptr, render_settings.debug_view == view.mode))
 					{
 						renderer.setDebugView(view.mode);
 					}
@@ -72,18 +84,18 @@ std::string DebugMenu::draw(uint32_t width, uint32_t height, bool& pause_on_focu
 		}
 		if (ImGui::BeginMenu("Engine"))
 		{
-			if (ImGui::MenuItem("Pause when unfocused", nullptr, pause_on_focus_lost))
+			if (ImGui::MenuItem("Pause when unfocused", nullptr, pause_on_focus_lost_))
 			{
-				pause_on_focus_lost = !pause_on_focus_lost;
+				pause_on_focus_lost_ = !pause_on_focus_lost_;
 			}
 			ImGui::EndMenu();
 		}
 		if (ImGui::BeginMenu("Tools"))
 		{
 			ImGui::MenuItem("ImGui Metrics", nullptr, &show_imgui_metrics_);
-			if (ImGui::MenuItem("Capture frame", nullptr, false, render_device.hasFrameCapturer()))
+			if (ImGui::MenuItem("Capture frame", nullptr, false, render_device_.hasFrameCapturer()))
 			{
-				render_device.requestFrameCapture();
+				render_device_.requestFrameCapture();
 			}
 			ImGui::EndMenu();
 		}
@@ -97,6 +109,31 @@ std::string DebugMenu::draw(uint32_t width, uint32_t height, bool& pause_on_focu
 		return selected_scene;
 	}
 
+	if (show_directional_light_)
+	{
+		if (ImGui::Begin("Directional light", &show_directional_light_, ImGuiWindowFlags_AlwaysAutoResize))
+		{
+			scene::DirectionalLight& light = scene.getDirectionalLight();
+			ImGui::Checkbox("Enabled", &light.enabled);
+			float direction[] = { light.direction_to_light.x, light.direction_to_light.y, light.direction_to_light.z };
+			if (ImGui::SliderFloat3("Direction to light", direction, -1.0f, 1.0f))
+			{
+				light.direction_to_light = { direction[0], direction[1], direction[2] };
+			}
+
+			float color[] = { light.color.x, light.color.y, light.color.z };
+			if (ImGui::ColorEdit3("Color", color, ImGuiColorEditFlags_Float))
+			{
+				light.color = { color[0], color[1], color[2] };
+			}
+			ImGui::DragFloat("Intensity", &light.intensity, 0.05f, 0.0f, 0.0f);
+			if (light.intensity < 0.0f)
+			{
+				light.intensity = 0.0f;
+			}
+		}
+		ImGui::End();
+	}
 	if (show_rendering_stats_)
 	{
 		ImGui::SetNextWindowPos(ImVec2(12.0f, menu_height + 8.0f), ImGuiCond_FirstUseEver);
@@ -107,7 +144,7 @@ std::string DebugMenu::draw(uint32_t width, uint32_t height, bool& pause_on_focu
 			ImGui::Text("Frame time: %.2f ms", io.DeltaTime * 1000.0f);
 			ImGui::Text("Frame rate: %.1f FPS", io.Framerate);
 			ImGui::Separator();
-			ImGui::Text("Back buffer: %u x %u", width, height);
+			ImGui::Text("Back buffer: %u x %u", render_settings.render_width, render_settings.render_height);
 		}
 		ImGui::End();
 	}

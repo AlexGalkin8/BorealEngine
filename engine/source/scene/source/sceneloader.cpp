@@ -526,6 +526,15 @@ static std::unique_ptr<Scene> loadSceneFromJsonText(
 	camera->setPerspective(math::radians(camera_fov_degrees), camera_aspect, camera_near, camera_far);
 	scene->setCamera(std::move(camera));
 
+	const std::string light_object = extractObjectValue(json_text, "directional_light");
+	if (!light_object.empty())
+	{
+		DirectionalLight& light = scene->getDirectionalLight();
+		extractVector3Value(light_object, "direction_to_light", light.direction_to_light);
+		extractVector3Value(light_object, "color", light.color);
+		extractNumberValue(light_object, "intensity", light.intensity);
+	}
+
 	const std::string scene_path = extractStringValue(json_text, "scene_path");
 	std::vector<SceneModelEntry> model_entries = extractModelEntries(json_text);
 

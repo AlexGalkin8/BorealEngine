@@ -14,6 +14,7 @@
 namespace scene {
 class Scene;
 class Camera;
+struct DirectionalLight;
 class StaticMeshActor;
 struct MeshHandle;
 struct MeshSlot;
@@ -95,7 +96,7 @@ private:
 	using StaticMeshBucket = std::vector<StaticMeshDraw>;
 	void depthPrepass(const StaticMeshBucket& bucket, ITexture& depth_texture);
 	void gBufferPass(const StaticMeshBucket& bucket, ITexture& depth_texture);
-	void deferredLightingPass();
+	void deferredLightingPass(const scene::DirectionalLight& light);
 	void postprocessPass(ITexture& output_target);
 
 	void drawStaticMeshes(ICommandList& command_list, const StaticMeshBucket& bucket, bool bind_material) const;

@@ -15,6 +15,15 @@ class Camera;
 namespace scene
 {
 
+struct DirectionalLight
+{
+	math::Vector3 direction_to_light = { 0.36f, 0.48f, -0.8f };
+	math::Vector3 color = { 1.0f, 1.0f, 1.0f };
+	float intensity = 2.0f;
+	bool enabled = true;
+};
+
+
 class Scene
 {
 public:
@@ -31,6 +40,9 @@ public:
 
 	void setCamera(std::unique_ptr<Camera> camera);
 
+	DirectionalLight& getDirectionalLight() { return directional_light_; }
+	const DirectionalLight& getDirectionalLight() const { return directional_light_; }
+
 	void addActor(const std::shared_ptr<Actor>& actor);
 	void removeActor(const std::shared_ptr<Actor>& actor);
 
@@ -39,6 +51,7 @@ public:
 private:
 	const std::string name_;
 	std::unique_ptr<Camera> camera_;
+	DirectionalLight directional_light_;
 	std::vector<std::shared_ptr<Actor>> actors_;
 	std::vector<std::shared_ptr<StaticMeshActor>> static_mesh_actors_;
 };

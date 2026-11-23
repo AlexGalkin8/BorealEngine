@@ -6,7 +6,6 @@
 
 #include <memory>
 #include <string>
-#include <vector>
 
 
 namespace platform {
@@ -69,13 +68,11 @@ private:
 	std::unique_ptr<render::ISwapChain> swap_chain_;
 	std::unique_ptr<render::IRenderer> renderer_;
 	std::unique_ptr<render::ImGuiBackend> imgui_backend_;
+	std::string active_scene_name_;
 	std::unique_ptr<engine::DebugMenu> debug_menu_;
 
-	std::vector<std::string> scene_names_;
-	std::string active_scene_name_;
 	std::unique_ptr<scene::Scene> current_scene_;
 
 	bool is_running_ = false;
-	bool pause_on_focus_lost_ = false;
 	core::Time time_;
 };

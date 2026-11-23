@@ -166,7 +166,7 @@ void DeferredRenderer::render(const scene::Scene& scene, const scene::Camera& ca
 	const StaticMeshBucket bucket = buildStaticMeshBucket(scene, camera);
 	depthPrepass(bucket, depth_texture);
 	gBufferPass(bucket, depth_texture);
-	deferredLightingPass();
+	deferredLightingPass(scene.getDirectionalLight());
 	postprocessPass(output_target);
 	render_device_.executeCommandLists(ECommandListType::kDirect);
 }
@@ -349,11 +349,16 @@ void DeferredRenderer::gBufferPass(const StaticMeshBucket& bucket, ITexture& dep
 }
 
 
-void DeferredRenderer::deferredLightingPass()
+void DeferredRenderer::deferredLightingPass(const scene::DirectionalLight& light)
 {
-	static constexpr DirectionalLightConstants kLight = {
-		{ 0.36f, 0.48f, -0.8f }, 0.0f,
-		{ 2.0f, 2.0f, 2.0f }, 0.0f,
+	const math::Vector3 direction = light.direction_to_light.lengthSq() > 0.0f
+		? light.direction_to_light.normalize() : math::Vector3(0.0f, 0.0f, 0.0f);
+	const float intensity = light.enabled ? std::max(light.intensity, 0.0f) : 0.0f;
+	const DirectionalLightConstants constants = {
+		{ direction.x, direction.y, direction.z }, 0.0f,
+		{ std::max(light.color.x, 0.0f) * intensity,
+		  std::max(light.color.y, 0.0f) * intensity,
+		  std::max(light.color.z, 0.0f) * intensity }, 0.0f,
 	};
 
 	ITexture& lighting_target = *scene_lighting_hdr_;
@@ -364,7 +369,7 @@ void DeferredRenderer::deferredLightingPass()
 	setFullscreenViewport(command_list, lighting_target);
 	command_list.setDescriptorSet(0, { DescriptorResource::textureSRV(gbuffer_base_color_),
 		DescriptorResource::textureSRV(gbuffer_normal_) });
-	command_list.setGraphicsRoot32BitConstants(1, 8, &kLight);
+	command_list.setGraphicsRoot32BitConstants(1, 8, &constants);
 	command_list.draw(3, 0);
 	command_list.transitionTexture(lighting_target, EResourceState::kRenderTarget, EResourceState::kShaderResource);
 	render_device_.submitCommandList(command_list);

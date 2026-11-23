@@ -80,9 +80,9 @@ std::unique_ptr<Engine> Engine::create(const std::string& settings_file_name,
 
 	engine->imgui_backend_ = render::ImGuiBackend::create(*engine->render_device_);
 	ASSERT_MSG_RETURN_NULL(engine->imgui_backend_ != nullptr, "Failed to initialize ImGui");
-	engine->debug_menu_ = std::make_unique<engine::DebugMenu>();
 
-	engine->scene_names_ = scene::SceneLoader::listSceneNames(engine->settings_->engine_settings.data_root_path);
+	engine->debug_menu_ = std::make_unique<engine::DebugMenu>(*engine->render_device_,
+		scene::SceneLoader::listSceneNames(engine->settings_->engine_settings.data_root_path), engine->active_scene_name_);
 	const bool scene_loaded = engine->loadScene(engine->settings_->engine_settings.default_scene_name);
 	ASSERT_MSG_RETURN_NULL(scene_loaded, "Failed to create default scene");
 
@@ -113,7 +113,7 @@ void Engine::run()
 			}
 		}
 
-		if (pause_on_focus_lost_ && window_)
+		if (debug_menu_->shouldPauseOnFocusLost() && window_)
 		{
 			bool active = window_->isActive();
 			if (!active && !isPaused())
@@ -142,7 +142,6 @@ Engine::~Engine()
 
 Engine::Engine()
 	: is_running_(false)
-	, pause_on_focus_lost_(false)
 {
 }
 
@@ -261,8 +260,7 @@ void Engine::frame()
 	imgui_backend_->newFrame(*input_, width, height, static_cast<float>(dt));
 	if (debug_menu_->isVisible())
 	{
-		const std::string selected_scene = debug_menu_->draw(width, height, pause_on_focus_lost_, *render_device_, *renderer_,
-			scene_names_, active_scene_name_);
+		const std::string selected_scene = debug_menu_->draw(*current_scene_, *renderer_);
 		if (!selected_scene.empty())
 		{
 			loadScene(selected_scene);
