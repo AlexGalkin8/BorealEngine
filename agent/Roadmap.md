@@ -6,6 +6,9 @@ and [ImGui editor](decisions/002-imgui-editor.md) decisions. The sequence and
 scope below are proposed. See the [prioritized backlog](tasks/Backlog.md) for
 dependencies and individual work items.
 
+See the [technology roadmap](TechnologyRoadmap.md) for research candidates,
+adoption prerequisites and decisions beyond the baseline.
+
 | Stage | Scope and exit criteria | Status |
 |---|---|---|
 | M0. Stable baseline | Build Debug and Release, run the textured sample, verify resize and check debug-layer output. | Build, texturing and shutdown evidence in tasks 002–004. Resize smoke checks in 005 and later rendering tasks. |
