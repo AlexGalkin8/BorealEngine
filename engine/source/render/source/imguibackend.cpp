@@ -34,7 +34,11 @@ static void updateInput(const platform::IInput& input, ImGuiIO& io)
 	io.AddKeyEvent(ImGuiMod_Shift, input.isKeyDown(EKey::kLeftShift) || input.isKeyDown(EKey::kRightShift));
 	io.AddKeyEvent(ImGuiMod_Alt, input.isKeyDown(EKey::kLeftAlt) || input.isKeyDown(EKey::kRightAlt));
 
-	struct KeyMapping { EKey engine_key; ImGuiKey imgui_key; };
+	struct KeyMapping
+	{
+		EKey engine_key;
+		ImGuiKey imgui_key;
+	};
 	static constexpr KeyMapping kKeys[] = {
 		{ EKey::kTab, ImGuiKey_Tab }, { EKey::kUp, ImGuiKey_UpArrow }, { EKey::kDown, ImGuiKey_DownArrow },
 		{ EKey::kLeft, ImGuiKey_LeftArrow }, { EKey::kRight, ImGuiKey_RightArrow },
@@ -48,11 +52,19 @@ static void updateInput(const platform::IInput& input, ImGuiIO& io)
 	{
 		io.AddKeyEvent(key.imgui_key, input.isKeyDown(key.engine_key));
 	}
-	for (uint32_t index = 0; index <= static_cast<uint32_t>(EKey::kZ) - static_cast<uint32_t>(EKey::kA); ++index)
+	const auto add_key_range = [&input, &io](EKey first, EKey last, ImGuiKey first_imgui_key)
 	{
-		io.AddKeyEvent(static_cast<ImGuiKey>(ImGuiKey_A + index),
-			input.isKeyDown(static_cast<EKey>(static_cast<uint32_t>(EKey::kA) + index)));
-	}
+		const uint32_t first_key = static_cast<uint32_t>(first);
+		const uint32_t last_key = static_cast<uint32_t>(last);
+		for (uint32_t key = first_key; key <= last_key; ++key)
+		{
+			io.AddKeyEvent(static_cast<ImGuiKey>(first_imgui_key + key - first_key),
+				input.isKeyDown(static_cast<EKey>(key)));
+		}
+	};
+	add_key_range(EKey::kA, EKey::kZ, ImGuiKey_A);
+	add_key_range(EKey::k0, EKey::k9, ImGuiKey_0);
+	add_key_range(EKey::kF1, EKey::kF12, ImGuiKey_F1);
 	for (char16_t character : input.getTextInput())
 	{
 		io.AddInputCharacterUTF16(character);
